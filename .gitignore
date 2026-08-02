@@ -1,0 +1,24 @@
+# Secrets — never commit
+.env
+credentials.json
+token*.json
+restore_env.sh
+*.pem
+*.key
+
+# Local data
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,15 @@
+[Unit]
+Description=Hermes Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+User=hermes
+WorkingDirectory=/home/hermes/app
+EnvironmentFile=/home/hermes/app/.env
+ExecStart=/home/hermes/app/venv/bin/python main.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
