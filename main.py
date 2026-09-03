@@ -758,7 +758,7 @@ def _fmt_navi_match(match: dict, game: str) -> str:
     if begin_at:
         try:
             dt = datetime.fromisoformat(begin_at.replace("Z", "+00:00"))
-            time_str = dt.astimezone(timezone(timedelta(hours=4))).strftime("%a %b %d, %H:%M Baku")
+            time_str = dt.astimezone(timezone(timedelta(hours=-4))).strftime("%a %b %d, %H:%M NYC")
         except Exception:
             time_str = begin_at
     else:
