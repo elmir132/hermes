@@ -2,7 +2,7 @@
 
 A production Telegram AI assistant with long-term memory, built on retrieval-augmented generation over a local SQLite vector store.
 
-Runs continuously on a Linux server under `systemd`, serving live users.
+Runs continuously on a Linux server under `systemd` as a personal assistant (access is restricted to a single allow-listed Telegram user).
 
 ---
 
