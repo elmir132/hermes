@@ -84,6 +84,15 @@ sudo systemctl enable --now hermes
 
 `Restart=always` keeps it up across crashes and reboots.
 
+## Tests
+
+```bash
+pip install pytest
+pytest -q
+```
+
+20 tests cover the logic that does not need the network: Markdown to Telegram HTML, the quota-aware model routing (cooldowns, unavailable models, the cheap tier for small talk), vector packing and cosine similarity, the SQLite memory with semantic recall, and the email and match-time formatters. The Telegram, Gemini and Google libraries are replaced with stand-ins in `tests/conftest.py`, so the tests run without credentials. The integrations themselves (Calendar, Gmail, Todoist, search) are not covered by tests.
+
 ## Configuration
 
 All secrets come from the environment — nothing is hardcoded. See `.env.example`.
