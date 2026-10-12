@@ -1,8 +1,8 @@
 # Hermes
 
-A production Telegram AI assistant with long-term memory, built on retrieval-augmented generation over a local SQLite vector store.
+A Telegram AI assistant with long-term memory, built on retrieval-augmented generation over a local SQLite vector store.
 
-Runs continuously on a Linux server under `systemd` as a personal assistant (access is restricted to a single allow-listed Telegram user).
+Ran on a Linux server under `systemd` as a personal assistant from May 2026 (access is restricted to a single allow-listed Telegram user). The server has since been shut down; the code and tests remain here.
 
 ---
 
