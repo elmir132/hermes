@@ -1,0 +1,317 @@
+{
+ "companies": [
+  {
+   "name": "Pangram Labs",
+   "provider": "ashby",
+   "slug": "pangramlabs"
+  },
+  {
+   "name": "LiteLLM",
+   "provider": "ashby",
+   "slug": "litellm"
+  },
+  {
+   "name": "Anthropic",
+   "provider": "greenhouse",
+   "slug": "anthropic"
+  },
+  {
+   "name": "OpenAI",
+   "provider": "ashby",
+   "slug": "openai"
+  },
+  {
+   "name": "Cohere",
+   "provider": "ashby",
+   "slug": "cohere"
+  },
+  {
+   "name": "Perplexity",
+   "provider": "ashby",
+   "slug": "perplexity"
+  },
+  {
+   "name": "Cursor",
+   "provider": "ashby",
+   "slug": "cursor"
+  },
+  {
+   "name": "Modal",
+   "provider": "ashby",
+   "slug": "modal"
+  },
+  {
+   "name": "Replit",
+   "provider": "ashby",
+   "slug": "replit"
+  },
+  {
+   "name": "Hex",
+   "provider": "ashby",
+   "slug": "hex"
+  },
+  {
+   "name": "Notion",
+   "provider": "ashby",
+   "slug": "notion"
+  },
+  {
+   "name": "Ramp",
+   "provider": "ashby",
+   "slug": "ramp"
+  },
+  {
+   "name": "Plaid",
+   "provider": "ashby",
+   "slug": "plaid"
+  },
+  {
+   "name": "Supabase",
+   "provider": "ashby",
+   "slug": "supabase"
+  },
+  {
+   "name": "Snyk",
+   "provider": "ashby",
+   "slug": "snyk"
+  },
+  {
+   "name": "Linear",
+   "provider": "ashby",
+   "slug": "linear"
+  },
+  {
+   "name": "Mistral AI",
+   "provider": "lever",
+   "slug": "mistral"
+  },
+  {
+   "name": "Spotify",
+   "provider": "lever",
+   "slug": "spotify"
+  },
+  {
+   "name": "Databricks",
+   "provider": "greenhouse",
+   "slug": "databricks"
+  },
+  {
+   "name": "Scale AI",
+   "provider": "greenhouse",
+   "slug": "scaleai"
+  },
+  {
+   "name": "Stripe",
+   "provider": "greenhouse",
+   "slug": "stripe"
+  },
+  {
+   "name": "Datadog",
+   "provider": "greenhouse",
+   "slug": "datadog"
+  },
+  {
+   "name": "MongoDB",
+   "provider": "greenhouse",
+   "slug": "mongodb"
+  },
+  {
+   "name": "Elastic",
+   "provider": "greenhouse",
+   "slug": "elastic"
+  },
+  {
+   "name": "Cloudflare",
+   "provider": "greenhouse",
+   "slug": "cloudflare"
+  },
+  {
+   "name": "Figma",
+   "provider": "greenhouse",
+   "slug": "figma"
+  },
+  {
+   "name": "Brex",
+   "provider": "greenhouse",
+   "slug": "brex"
+  },
+  {
+   "name": "Coinbase",
+   "provider": "greenhouse",
+   "slug": "coinbase"
+  },
+  {
+   "name": "Robinhood",
+   "provider": "greenhouse",
+   "slug": "robinhood"
+  },
+  {
+   "name": "Reddit",
+   "provider": "greenhouse",
+   "slug": "reddit"
+  },
+  {
+   "name": "Discord",
+   "provider": "greenhouse",
+   "slug": "discord"
+  },
+  {
+   "name": "Pinterest",
+   "provider": "greenhouse",
+   "slug": "pinterest"
+  },
+  {
+   "name": "Okta",
+   "provider": "greenhouse",
+   "slug": "okta"
+  },
+  {
+   "name": "Twilio",
+   "provider": "greenhouse",
+   "slug": "twilio"
+  },
+  {
+   "name": "Jane Street",
+   "provider": "greenhouse",
+   "slug": "janestreet"
+  }
+ ],
+ "strong_title": [
+  "machine learning",
+  "ml",
+  "ai",
+  "applied ai",
+  "applied scientist",
+  "data scientist",
+  "research engineer",
+  "research scientist",
+  "forward deployed",
+  "trust",
+  "safety",
+  "integrity",
+  "security engineer",
+  "llm",
+  "nlp",
+  "generative"
+ ],
+ "include_title": [
+  "software engineer",
+  "software developer",
+  "backend",
+  "back end",
+  "full stack",
+  "fullstack",
+  "product engineer",
+  "data engineer",
+  "developer",
+  "engineer"
+ ],
+ "exclude_title": [
+  "senior",
+  "sr",
+  "staff",
+  "principal",
+  "director",
+  "manager",
+  "head",
+  "vp",
+  "lead",
+  "sales",
+  "account executive",
+  "marketing",
+  "recruiter",
+  "recruiting",
+  "legal",
+  "counsel",
+  "finance",
+  "accountant",
+  "support",
+  "operations",
+  "partnerships",
+  "customer success",
+  "solutions architect",
+  "designer",
+  "writer",
+  "hr",
+  "people",
+  "phd",
+  "ph.d",
+  "architect",
+  "executive",
+  "specialist",
+  "consultant"
+ ],
+ "junior_words": [
+  "junior",
+  "jr",
+  "associate",
+  "entry level",
+  "new grad",
+  "new graduate",
+  "graduate",
+  "university",
+  "early career",
+  "intern",
+  "internship",
+  "apprentice",
+  "fellow"
+ ],
+ "home_locations": [
+  "new york",
+  "new york city",
+  "nyc",
+  "brooklyn",
+  "manhattan"
+ ],
+ "locations": [
+  "new york",
+  "new york city",
+  "nyc",
+  "brooklyn",
+  "manhattan"
+ ],
+ "remote_regions": [
+  "united states",
+  "usa",
+  "u.s.",
+  "us",
+  "north america",
+  "americas",
+  "remote us",
+  "us remote"
+ ],
+ "exclude_locations": [
+  "europe",
+  "emea",
+  "india",
+  "uk",
+  "united kingdom",
+  "canada",
+  "germany",
+  "london",
+  "berlin",
+  "paris",
+  "singapore",
+  "tokyo",
+  "japan",
+  "australia",
+  "brazil",
+  "mexico",
+  "ireland",
+  "israel",
+  "poland",
+  "china",
+  "dublin",
+  "toronto",
+  "vancouver",
+  "sydney",
+  "bangalore",
+  "amsterdam",
+  "munich",
+  "zurich",
+  "seoul",
+  "korea",
+  "taiwan"
+ ],
+ "max_per_message": 12
+}

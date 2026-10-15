@@ -20,6 +20,7 @@ from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
 import digest
+import jobs
 
 # ── Markdown → Telegram HTML ──────────────────────────────────────────────────
 def md_to_html(text: str) -> str:
@@ -63,6 +64,7 @@ TMDB_TOKEN          = os.environ.get("TMDB_TOKEN", "")
 PANDASCORE_TOKEN    = os.environ.get("PANDASCORE_TOKEN", "")
 DIGEST_HOUR         = int(os.environ.get("DIGEST_HOUR", "8"))        # New York time
 DIGEST_DAILY        = os.environ.get("DIGEST_DAILY", "on").lower() != "off"
+JOBS_DAILY          = os.environ.get("JOBS_DAILY", "on").lower() != "off"      # job watcher, 10 min after the digest
 MAX_RECENT      = 20
 MAX_SEMANTIC   = 5
 DB_PATH        = Path(__file__).parent / "hermes.db"
@@ -1517,6 +1519,37 @@ async def cmd_digest(msg: Message):
     show_all = "all" in msg.text.lower().split()
     await msg.answer(await run_digest(mark=False, include_seen=show_all))
 
+# ── Job watcher (public Greenhouse / Lever / Ashby job feeds, no logins) ───────
+async def _jobs_get(url):
+    try:
+        async with httpx.AsyncClient(timeout=25, headers={"User-Agent": "hermes-job-watcher/1.0"}) as client:
+            r = await client.get(url)
+        return r.status_code, (r.json() if r.status_code == 200 else {})
+    except Exception:
+        return 0, {}
+
+async def run_jobs(mark: bool = True, include_seen: bool = False) -> str:
+    cfg = await asyncio.to_thread(jobs.load_config)
+    text, _, _ = await jobs.scan(cfg, _jobs_get, DB_PATH, mark=mark, include_seen=include_seen)
+    return text
+
+async def _jobs_loop():
+    await asyncio.sleep(45)
+    while True:
+        await asyncio.sleep(digest.seconds_until(DIGEST_HOUR) + 600)
+        try:
+            await bot.send_message(ALLOWED_USER, "💼 Job watch\n\n" + await run_jobs(mark=True))
+        except Exception:
+            pass
+        await asyncio.sleep(60)
+
+@dp.message(Command("jobs"))
+async def cmd_jobs(msg: Message):
+    if not allowed(msg): return
+    await bot.send_chat_action(msg.chat.id, "typing")
+    show_all = "all" in msg.text.lower().split()
+    await msg.answer(await run_jobs(mark=not show_all, include_seen=show_all))
+
 @dp.message(Command("tasks"))
 async def cmd_tasks(msg: Message):
     if not allowed(msg): return
@@ -1704,6 +1737,8 @@ async def main():
         asyncio.create_task(_navi_poll_loop())
     if DIGEST_DAILY:
         asyncio.create_task(_digest_loop())
+    if JOBS_DAILY:
+        asyncio.create_task(_jobs_loop())
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
