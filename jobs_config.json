@@ -184,7 +184,6 @@
   "applied scientist",
   "data scientist",
   "research engineer",
-  "research scientist",
   "forward deployed",
   "trust",
   "safety",
@@ -239,7 +238,34 @@
   "architect",
   "executive",
   "specialist",
-  "consultant"
+  "consultant",
+  "intern",
+  "internship",
+  "interns",
+  "co op",
+  "coop",
+  "apprentice",
+  "apprenticeship",
+  "fellow",
+  "fellowship",
+  "contract",
+  "contractor",
+  "temporary",
+  "temp",
+  "part time",
+  "seasonal",
+  "student",
+  "policy",
+  "strategist",
+  "strategy",
+  "gtm",
+  "go to market",
+  "governance",
+  "community",
+  "enablement",
+  "deployment strategist",
+  "analyst",
+  "research scientist"
  ],
  "junior_words": [
   "junior",
@@ -250,11 +276,7 @@
   "new graduate",
   "graduate",
   "university",
-  "early career",
-  "intern",
-  "internship",
-  "apprentice",
-  "fellow"
+  "early career"
  ],
  "home_locations": [
   "new york",
@@ -313,5 +335,19 @@
   "korea",
   "taiwan"
  ],
- "max_per_message": 12
+ "max_per_message": 12,
+ "exclude_employment": [
+  "intern",
+  "internship",
+  "contract",
+  "contractor",
+  "parttime",
+  "part time",
+  "part-time",
+  "temporary",
+  "seasonal",
+  "freelance"
+ ],
+ "max_years": 4,
+ "max_per_company": 3
 }

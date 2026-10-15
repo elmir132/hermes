@@ -46,7 +46,7 @@ def normalize(provider: str, raw: dict, company: str) -> dict:
         return {"key": f"gh:{company}:{raw.get('id')}", "company": company, "title": raw.get("title", ""),
                 "location": (raw.get("location") or {}).get("name", ""), "remote": False,
                 "url": raw.get("absolute_url", ""), "published": raw.get("first_published") or raw.get("updated_at") or "",
-                "text": "", "gh_id": raw.get("id")}
+                "text": "", "gh_id": raw.get("id"), "employment": ""}
     if provider == "lever":
         cats = raw.get("categories") or {}
         locs = cats.get("allLocations") or [cats.get("location", "")]
@@ -55,13 +55,15 @@ def normalize(provider: str, raw: dict, company: str) -> dict:
         return {"key": f"lv:{company}:{raw.get('id')}", "company": company, "title": raw.get("text", ""),
                 "location": "; ".join(x for x in locs if x), "remote": (raw.get("workplaceType") or "").lower() == "remote",
                 "url": raw.get("hostedUrl", ""), "published": published,
-                "text": raw.get("descriptionPlain", "") + " " + raw.get("additionalPlain", "")}
+                "text": raw.get("descriptionPlain", "") + " " + raw.get("additionalPlain", ""),
+                "employment": cats.get("commitment", "")}
     if provider == "ashby":
         locs = [raw.get("location", "")] + [s.get("location", "") if isinstance(s, dict) else str(s) for s in raw.get("secondaryLocations") or []]
         return {"key": f"ab:{company}:{raw.get('id')}", "company": company, "title": (raw.get("title") or "").strip(),
                 "location": "; ".join(x for x in locs if x), "remote": bool(raw.get("isRemote")) or (raw.get("workplaceType") or "").lower() == "remote",
                 "url": _first(raw.get("jobUrl"), raw.get("applyUrl")), "published": raw.get("publishedAt") or "",
-                "text": raw.get("descriptionPlain", ""), "listed": raw.get("isListed", True)}
+                "text": raw.get("descriptionPlain", ""), "listed": raw.get("isListed", True),
+                "employment": raw.get("employmentType", "")}
     raise ValueError(f"unknown provider {provider}")
 
 
@@ -109,6 +111,16 @@ def title_matches(title: str, cfg: dict):
     return True, score, reasons
 
 
+YEARS = re.compile(r"(\d{1,2})\s*\+?\s*(?:-|–|to\s*\d{1,2}\s*)?(?:\d{1,2}\s*)?\+?\s*(?:years?|yrs?)\b[^.\n]{0,80}?experience"
+                   r"|experience[^.\n]{0,60}?(\d{1,2})(?:\s*(?:-|–|to)\s*\d{1,2})?\s*\+?\s*(?:years?|yrs?)\b", re.I)
+
+
+def required_years(text: str):
+    """First 'N years of experience' in the posting, or None. A hint only: postings word this loosely."""
+    m = YEARS.search(text or "")
+    return int(m.group(1) or m.group(2)) if m else None
+
+
 def visa_flags(text: str) -> list:
     flags = []
     if CITIZEN_ONLY.search(text):
@@ -124,6 +136,8 @@ def score_job(job: dict, cfg: dict, now=None):
     ok, score, reasons = title_matches(job["title"], cfg)
     if not ok:
         return None
+    if has(re.sub(r"[^a-z0-9 ]", " ", (job.get("employment") or "").lower()), cfg.get("exclude_employment", [])):
+        return None                                           # the feed says intern, contract or part time
     if not location_ok(job["location"], job["remote"], cfg):
         return None
     if has(job["location"].lower(), cfg.get("home_locations", [])):
@@ -182,20 +196,39 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     old = set() if include_seen else seen_keys(db_path, keys)
     fresh = [(p, s, j) for p, s, j in candidates if j["key"] not in old]
     fresh.sort(key=lambda x: (-x[2]["score"], x[2]["company"], x[2]["title"]))
-    shown = fresh[: limit or cfg.get("max_per_message", 12)]
-    for provider, slug, job in shown:                       # read the description only for what will be shown
-        if provider == "greenhouse" and not job["text"]:
+    shown, skipped_keys, fetched, per_company = [], [], 0, {}
+    cap = cfg.get("max_per_company") or 10**6
+    wanted = limit or cfg.get("max_per_message", 12)
+    max_years = cfg.get("max_years")
+    for provider, slug, job in fresh:
+        if len(shown) >= wanted:
+            break
+        if per_company.get(job["company"], 0) >= cap:           # keep one big company from filling the list
+            continue
+        if provider == "greenhouse" and not job["text"]:        # the list has no description: read it only when needed
+            if fetched >= DETAIL_LIMIT * 2:
+                continue
+            fetched += 1
             status, detail = await get_json(f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs/{job['gh_id']}")
             if status == 200 and isinstance(detail, dict):
                 job["text"] = re.sub(r"<[^>]+>", " ", detail.get("content", "")).replace("&nbsp;", " ")
-        job["flags"] = visa_flags(job["text"])
+        years = required_years(job["text"])
+        if max_years and years is not None and years >= max_years:
+            skipped_keys.append(job["key"])                      # asks for too much experience: never show it again
+            continue
+        job["flags"] = visa_flags(job["text"]) + ([f"asks for {years}+ years"] if years and years >= 3 else [])
+        shown.append((provider, slug, job))
+        per_company[job["company"]] = per_company.get(job["company"], 0) + 1
+    if mark:
+        mark_seen(db_path, skipped_keys)
     if not shown:
         return "No new matching roles today." + _errs(errors), 0, errors
-    lines = [f"{len(fresh)} new match{'es' if len(fresh) != 1 else ''}, showing {len(shown)}:"]
+    remaining = len(fresh) - len(shown) - len(skipped_keys)      # roughly; capped companies keep their extras for later
+    lines = [f"{len(shown)} new role{'s' if len(shown) != 1 else ''} (about {max(remaining, 0)} more waiting):"]
     for _, _, j in shown:
         where = j["location"] if len(j["location"]) <= 60 else j["location"][:57] + "..."
         lines.append(f"\n• {j['company']}: {j['title']}\n  {where}{' (remote ok)' if j['remote'] else ''}\n  {'; '.join(j['flags'])}\n  {j['url']}")
-    lines.append("\nVisa notes are only hints from the posting text. Read the posting before relying on them.")
+    lines.append("\nVisa and experience notes are only hints from the posting text. Read the posting before relying on them.")
     text = "\n".join(lines)[:OUTPUT_CHARS] + _errs(errors)
     if mark:
         mark_seen(db_path, [j["key"] for _, _, j in shown])

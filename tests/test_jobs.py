@@ -20,13 +20,13 @@ def gh_job(i, title, location="New York, NY", first="2026-10-10T00:00:00-04:00")
     return {"id": i, "title": title, "location": {"name": location}, "absolute_url": f"https://example.com/gh/{i}", "first_published": first}
 
 
-def ab_job(i, title, location="New York City", remote=False, text="", listed=True):
-    return {"id": f"a{i}", "title": title, "location": location, "isRemote": remote, "jobUrl": f"https://example.com/ab/{i}",
+def ab_job(i, title, location="New York City", remote=False, text="", listed=True, employment="FullTime"):
+    return {"id": f"a{i}", "employmentType": employment, "title": title, "location": location, "isRemote": remote, "jobUrl": f"https://example.com/ab/{i}",
             "publishedAt": "2026-10-12T00:00:00Z", "descriptionPlain": text, "isListed": listed, "secondaryLocations": []}
 
 
-def lv_job(i, title, location="New York", text="", workplace="onsite"):
-    return {"id": f"l{i}", "text": title, "categories": {"location": location, "allLocations": [location]}, "hostedUrl": f"https://example.com/lv/{i}",
+def lv_job(i, title, location="New York", text="", workplace="onsite", commitment="Permanent"):
+    return {"id": f"l{i}", "text": title, "categories": {"location": location, "allLocations": [location], "commitment": commitment}, "hostedUrl": f"https://example.com/lv/{i}",
             "createdAt": 1791000000000, "descriptionPlain": text, "additionalPlain": "", "workplaceType": workplace}
 
 
@@ -81,6 +81,24 @@ class TitleTests(unittest.TestCase):
         self.assertGreater(b, a)
 
 
+class FullTimeTests(unittest.TestCase):
+    def test_internships_and_contracts_are_skipped_by_title(self):
+        for t in ["Machine Learning Intern", "AI Research Internship", "Software Engineer (Contract)", "ML Engineer Co-op", "Backend Engineer, Part Time", "Summer Fellow, AI"]:
+            self.assertFalse(jobs.title_matches(t, CFG)[0], t)
+
+    def test_internships_are_skipped_by_the_feeds_employment_type(self):
+        a = jobs.jobs_from_feed("ashby", {"jobs": [ab_job(1, "Machine Learning Engineer", employment="Intern")]}, "Acme")[0]
+        l = jobs.jobs_from_feed("lever", [lv_job(2, "Machine Learning Engineer", commitment="Contract")], "Acme")[0]
+        b = jobs.jobs_from_feed("ashby", {"jobs": [ab_job(3, "Machine Learning Engineer", employment="FullTime")]}, "Acme")[0]
+        self.assertIsNone(jobs.score_job(a, CFG, NOW))
+        self.assertIsNone(jobs.score_job(l, CFG, NOW))
+        self.assertIsNotNone(jobs.score_job(b, CFG, NOW))
+
+    def test_new_grad_and_junior_roles_still_count(self):
+        for t in ["Software Engineer, New Grad", "Machine Learning Engineer (Junior)", "University Graduate Data Scientist"]:
+            self.assertTrue(jobs.title_matches(t, CFG)[0], t)
+
+
 class LocationTests(unittest.TestCase):
     def ok(self, loc, remote=False):
         return jobs.location_ok(loc, remote, CFG)
@@ -99,6 +117,18 @@ class LocationTests(unittest.TestCase):
         self.assertTrue(self.ok("", remote=True))
         self.assertTrue(self.ok("Remote"))
         self.assertFalse(self.ok("Remote - Germany", remote=True))
+
+
+class YearsTests(unittest.TestCase):
+    def test_years_are_read_from_common_wordings(self):
+        for text, n in [("5+ years of experience in machine learning", 5), ("At least 3 years' professional experience", 3),
+                        ("Experience: 4-6 years building backend systems", 4), ("2 years of industry experience", 2),
+                        ("Requires experience of 7 years in distributed systems", 7)]:
+            self.assertEqual(jobs.required_years(text), n, text)
+
+    def test_unrelated_numbers_are_ignored(self):
+        self.assertIsNone(jobs.required_years("Founded 10 years ago, we love dogs. New grads welcome."))
+        self.assertIsNone(jobs.required_years(""))
 
 
 class VisaTests(unittest.TestCase):
@@ -160,8 +190,9 @@ class ScanTests(unittest.TestCase):
     def test_the_number_shown_is_capped_and_the_rest_come_next_time(self):
         feeds = FakeFeeds({"ashbyhq": {"jobs": [ab_job(i, f"ML Engineer {i}") for i in range(20)]}})
         co = [{"name": "Acme", "provider": "ashby", "slug": "acme"}]
-        first = self.scan(feeds, co, limit=12)
-        second = self.scan(feeds, co, limit=12)
+        cfg = cfg_with(co, max_per_company=None)
+        first = run(jobs.scan(cfg, feeds, self.db, now=NOW, limit=12))
+        second = run(jobs.scan(cfg, feeds, self.db, now=NOW, limit=12))
         self.assertEqual((first[1], second[1]), (12, 8))
 
     def test_one_broken_company_does_not_stop_the_scan(self):
@@ -177,6 +208,28 @@ class ScanTests(unittest.TestCase):
         text, n, _ = self.scan(feeds, [{"name": "Acme", "provider": "greenhouse", "slug": "acme"}])
         self.assertIn("⚠️ says no sponsorship", text)
         self.assertEqual([c for c in feeds.calls if c.endswith("/jobs/1") or c.endswith("/jobs/2")], ["https://boards-api.greenhouse.io/v1/boards/acme/jobs/1"])
+
+    def test_roles_asking_for_many_years_are_skipped_and_not_shown_again(self):
+        feeds = FakeFeeds({"ashbyhq": {"jobs": [ab_job(1, "ML Engineer", text="You have 6+ years of experience."),
+                                              ab_job(2, "Backend Engineer", text="2 years of experience is plenty."),
+                                              ab_job(3, "Data Engineer", text="Built pipelines. 3+ years of experience.")]}})
+        co = [{"name": "Acme", "provider": "ashby", "slug": "acme"}]
+        text, n, _ = self.scan(feeds, co)
+        self.assertEqual(n, 2)
+        self.assertNotIn("ML Engineer", text.replace("Data Engineer", ""))
+        self.assertIn("asks for 3+ years", text)
+        again = self.scan(feeds, co, include_seen=True)
+        self.assertEqual(again[1], 2)                                       # the 6-year role never comes back
+
+    def test_one_company_cannot_fill_the_whole_list(self):
+        feeds = FakeFeeds({"job-board/big": {"jobs": [ab_job(i, f"ML Engineer {i}") for i in range(10)]},
+                           "job-board/small": {"jobs": [ab_job(100, "Backend Engineer")]}})
+        cos = [{"name": "Big", "provider": "ashby", "slug": "big"}, {"name": "Small", "provider": "ashby", "slug": "small"}]
+        text, n, _ = run(jobs.scan(cfg_with(cos, max_per_company=3), feeds, self.db, now=NOW))
+        self.assertEqual(text.count("• Big:"), 3)
+        self.assertIn("• Small:", text)
+        text2, _, _ = run(jobs.scan(cfg_with(cos, max_per_company=3), feeds, self.db, now=NOW))
+        self.assertEqual(text2.count("• Big:"), 3)          # the next batch continues with the rest
 
     def test_better_matches_come_first(self):
         feeds = FakeFeeds({"ashbyhq": {"jobs": [ab_job(1, "Software Engineer"), ab_job(2, "Machine Learning Engineer (Junior)")]}})
