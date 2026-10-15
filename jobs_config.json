@@ -1,179 +1,340 @@
 {
  "companies": [
   {
-   "name": "Pangram Labs",
-   "provider": "ashby",
-   "slug": "pangramlabs"
-  },
-  {
-   "name": "LiteLLM",
-   "provider": "ashby",
-   "slug": "litellm"
-  },
-  {
-   "name": "Anthropic",
+   "name": "Jane Street",
    "provider": "greenhouse",
-   "slug": "anthropic"
+   "slug": "janestreet",
+   "tier": 1
+  },
+  {
+   "name": "Hudson River Trading",
+   "provider": "ashby",
+   "slug": "hrt",
+   "tier": 1
+  },
+  {
+   "name": "Jump Trading",
+   "provider": "greenhouse",
+   "slug": "jumptrading",
+   "tier": 1
+  },
+  {
+   "name": "Optiver",
+   "provider": "greenhouse",
+   "slug": "optiver",
+   "tier": 1
+  },
+  {
+   "name": "IMC Trading",
+   "provider": "greenhouse",
+   "slug": "imc",
+   "tier": 1
   },
   {
    "name": "OpenAI",
    "provider": "ashby",
-   "slug": "openai"
+   "slug": "openai",
+   "tier": 1
   },
   {
-   "name": "Cohere",
-   "provider": "ashby",
-   "slug": "cohere"
+   "name": "Anthropic",
+   "provider": "greenhouse",
+   "slug": "anthropic",
+   "tier": 1
   },
   {
-   "name": "Perplexity",
-   "provider": "ashby",
-   "slug": "perplexity"
-  },
-  {
-   "name": "Cursor",
-   "provider": "ashby",
-   "slug": "cursor"
-  },
-  {
-   "name": "Modal",
-   "provider": "ashby",
-   "slug": "modal"
-  },
-  {
-   "name": "Replit",
-   "provider": "ashby",
-   "slug": "replit"
-  },
-  {
-   "name": "Hex",
-   "provider": "ashby",
-   "slug": "hex"
-  },
-  {
-   "name": "Notion",
-   "provider": "ashby",
-   "slug": "notion"
-  },
-  {
-   "name": "Ramp",
-   "provider": "ashby",
-   "slug": "ramp"
-  },
-  {
-   "name": "Plaid",
-   "provider": "ashby",
-   "slug": "plaid"
-  },
-  {
-   "name": "Supabase",
-   "provider": "ashby",
-   "slug": "supabase"
-  },
-  {
-   "name": "Snyk",
-   "provider": "ashby",
-   "slug": "snyk"
-  },
-  {
-   "name": "Linear",
-   "provider": "ashby",
-   "slug": "linear"
-  },
-  {
-   "name": "Mistral AI",
-   "provider": "lever",
-   "slug": "mistral"
-  },
-  {
-   "name": "Spotify",
-   "provider": "lever",
-   "slug": "spotify"
+   "name": "xAI",
+   "provider": "greenhouse",
+   "slug": "xai",
+   "tier": 1
   },
   {
    "name": "Databricks",
    "provider": "greenhouse",
-   "slug": "databricks"
-  },
-  {
-   "name": "Scale AI",
-   "provider": "greenhouse",
-   "slug": "scaleai"
+   "slug": "databricks",
+   "tier": 2
   },
   {
    "name": "Stripe",
    "provider": "greenhouse",
-   "slug": "stripe"
+   "slug": "stripe",
+   "tier": 2
   },
   {
-   "name": "Datadog",
+   "name": "Scale AI",
    "provider": "greenhouse",
-   "slug": "datadog"
+   "slug": "scaleai",
+   "tier": 2
   },
   {
-   "name": "MongoDB",
+   "name": "Point72",
    "provider": "greenhouse",
-   "slug": "mongodb"
+   "slug": "point72",
+   "tier": 2
   },
   {
-   "name": "Elastic",
+   "name": "Virtu Financial",
    "provider": "greenhouse",
-   "slug": "elastic"
+   "slug": "virtu",
+   "tier": 2
   },
   {
-   "name": "Cloudflare",
+   "name": "Akuna Capital",
    "provider": "greenhouse",
-   "slug": "cloudflare"
+   "slug": "akunacapital",
+   "tier": 2
+  },
+  {
+   "name": "Palantir",
+   "provider": "lever",
+   "slug": "palantir",
+   "tier": 2
+  },
+  {
+   "name": "Snowflake",
+   "provider": "ashby",
+   "slug": "snowflake",
+   "tier": 2
+  },
+  {
+   "name": "Airbnb",
+   "provider": "greenhouse",
+   "slug": "airbnb",
+   "tier": 2
   },
   {
    "name": "Figma",
    "provider": "greenhouse",
-   "slug": "figma"
+   "slug": "figma",
+   "tier": 2
   },
   {
-   "name": "Brex",
-   "provider": "greenhouse",
-   "slug": "brex"
+   "name": "Ramp",
+   "provider": "ashby",
+   "slug": "ramp",
+   "tier": 2
   },
   {
-   "name": "Coinbase",
-   "provider": "greenhouse",
-   "slug": "coinbase"
-  },
-  {
-   "name": "Robinhood",
-   "provider": "greenhouse",
-   "slug": "robinhood"
+   "name": "Cursor",
+   "provider": "ashby",
+   "slug": "cursor",
+   "tier": 2
   },
   {
    "name": "Reddit",
    "provider": "greenhouse",
-   "slug": "reddit"
+   "slug": "reddit",
+   "tier": 3
   },
   {
-   "name": "Discord",
+   "name": "Datadog",
    "provider": "greenhouse",
-   "slug": "discord"
+   "slug": "datadog",
+   "tier": 3
+  },
+  {
+   "name": "Cloudflare",
+   "provider": "greenhouse",
+   "slug": "cloudflare",
+   "tier": 3
+  },
+  {
+   "name": "Coinbase",
+   "provider": "greenhouse",
+   "slug": "coinbase",
+   "tier": 3
+  },
+  {
+   "name": "Robinhood",
+   "provider": "greenhouse",
+   "slug": "robinhood",
+   "tier": 3
+  },
+  {
+   "name": "Plaid",
+   "provider": "ashby",
+   "slug": "plaid",
+   "tier": 3
+  },
+  {
+   "name": "Notion",
+   "provider": "ashby",
+   "slug": "notion",
+   "tier": 3
+  },
+  {
+   "name": "MongoDB",
+   "provider": "greenhouse",
+   "slug": "mongodb",
+   "tier": 3
+  },
+  {
+   "name": "Dropbox",
+   "provider": "greenhouse",
+   "slug": "dropbox",
+   "tier": 3
+  },
+  {
+   "name": "Block",
+   "provider": "greenhouse",
+   "slug": "block",
+   "tier": 3
+  },
+  {
+   "name": "Roblox",
+   "provider": "greenhouse",
+   "slug": "roblox",
+   "tier": 3
   },
   {
    "name": "Pinterest",
    "provider": "greenhouse",
-   "slug": "pinterest"
+   "slug": "pinterest",
+   "tier": 3
+  },
+  {
+   "name": "Discord",
+   "provider": "greenhouse",
+   "slug": "discord",
+   "tier": 3
   },
   {
    "name": "Okta",
    "provider": "greenhouse",
-   "slug": "okta"
+   "slug": "okta",
+   "tier": 3
   },
   {
    "name": "Twilio",
    "provider": "greenhouse",
-   "slug": "twilio"
+   "slug": "twilio",
+   "tier": 3
   },
   {
-   "name": "Jane Street",
+   "name": "Elastic",
    "provider": "greenhouse",
-   "slug": "janestreet"
+   "slug": "elastic",
+   "tier": 3
+  },
+  {
+   "name": "Brex",
+   "provider": "greenhouse",
+   "slug": "brex",
+   "tier": 3
+  },
+  {
+   "name": "Flow Traders",
+   "provider": "greenhouse",
+   "slug": "flowtraders",
+   "tier": 3
+  },
+  {
+   "name": "Spotify",
+   "provider": "lever",
+   "slug": "spotify",
+   "tier": 3
+  },
+  {
+   "name": "Mistral AI",
+   "provider": "lever",
+   "slug": "mistral",
+   "tier": 3
+  },
+  {
+   "name": "Cohere",
+   "provider": "ashby",
+   "slug": "cohere",
+   "tier": 3
+  },
+  {
+   "name": "Perplexity",
+   "provider": "ashby",
+   "slug": "perplexity",
+   "tier": 3
+  },
+  {
+   "name": "Instacart",
+   "provider": "greenhouse",
+   "slug": "instacart",
+   "tier": 3
+  },
+  {
+   "name": "Pangram Labs",
+   "provider": "ashby",
+   "slug": "pangramlabs",
+   "tier": 4
+  },
+  {
+   "name": "LiteLLM",
+   "provider": "ashby",
+   "slug": "litellm",
+   "tier": 4
+  },
+  {
+   "name": "Modal",
+   "provider": "ashby",
+   "slug": "modal",
+   "tier": 4
+  },
+  {
+   "name": "Replit",
+   "provider": "ashby",
+   "slug": "replit",
+   "tier": 4
+  },
+  {
+   "name": "Hex",
+   "provider": "ashby",
+   "slug": "hex",
+   "tier": 4
+  },
+  {
+   "name": "Linear",
+   "provider": "ashby",
+   "slug": "linear",
+   "tier": 4
+  },
+  {
+   "name": "Supabase",
+   "provider": "ashby",
+   "slug": "supabase",
+   "tier": 4
+  },
+  {
+   "name": "Snyk",
+   "provider": "ashby",
+   "slug": "snyk",
+   "tier": 4
+  },
+  {
+   "name": "Harvey",
+   "provider": "ashby",
+   "slug": "harvey",
+   "tier": 4
+  },
+  {
+   "name": "Cognition",
+   "provider": "ashby",
+   "slug": "cognition",
+   "tier": 4
+  },
+  {
+   "name": "Sierra",
+   "provider": "ashby",
+   "slug": "sierra",
+   "tier": 4
+  },
+  {
+   "name": "Decagon",
+   "provider": "ashby",
+   "slug": "decagon",
+   "tier": 4
+  },
+  {
+   "name": "Baseten",
+   "provider": "ashby",
+   "slug": "baseten",
+   "tier": 4
   }
  ],
  "strong_title": [
@@ -378,5 +539,12 @@
   "freelance"
  ],
  "max_years": 4,
- "max_per_company": 3
+ "max_per_company": 3,
+ "tier_bonus": {
+  "1": 4,
+  "2": 3,
+  "3": 2,
+  "4": 0
+ },
+ "min_pay": 150000
 }

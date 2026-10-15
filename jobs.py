@@ -18,7 +18,7 @@ DETAIL_LIMIT = 25          # Greenhouse needs one extra request per candidate to
 
 GREENHOUSE = "https://boards-api.greenhouse.io/v1/boards/{slug}/jobs"
 LEVER = "https://api.lever.co/v0/postings/{slug}?mode=json"
-ASHBY = "https://api.ashbyhq.com/posting-api/job-board/{slug}"
+ASHBY = "https://api.ashbyhq.com/posting-api/job-board/{slug}?includeCompensation=true"
 
 NO_SPONSOR = re.compile(
     r"(will not|won't|unable to|cannot|can't|do not|does not|not able to|not currently)\s+(be able to\s+)?(provide|offer|sponsor|support)\b[^.]{0,60}(visa|sponsorship|work authori[sz]ation)"
@@ -46,7 +46,7 @@ def normalize(provider: str, raw: dict, company: str) -> dict:
         return {"key": f"gh:{company}:{raw.get('id')}", "company": company, "title": raw.get("title", ""),
                 "location": (raw.get("location") or {}).get("name", ""), "remote": False,
                 "url": raw.get("absolute_url", ""), "published": raw.get("first_published") or raw.get("updated_at") or "",
-                "text": "", "gh_id": raw.get("id"), "employment": ""}
+                "text": "", "gh_id": raw.get("id"), "employment": "", "pay": None}
     if provider == "lever":
         cats = raw.get("categories") or {}
         locs = cats.get("allLocations") or [cats.get("location", "")]
@@ -56,15 +56,22 @@ def normalize(provider: str, raw: dict, company: str) -> dict:
                 "location": "; ".join(x for x in locs if x), "remote": (raw.get("workplaceType") or "").lower() == "remote",
                 "url": raw.get("hostedUrl", ""), "published": published,
                 "text": raw.get("descriptionPlain", "") + " " + raw.get("additionalPlain", ""),
-                "employment": cats.get("commitment", "")}
+                "employment": cats.get("commitment", ""), "pay": _lever_pay(raw.get("salaryRange"))}
     if provider == "ashby":
         locs = [raw.get("location", "")] + [s.get("location", "") if isinstance(s, dict) else str(s) for s in raw.get("secondaryLocations") or []]
         return {"key": f"ab:{company}:{raw.get('id')}", "company": company, "title": (raw.get("title") or "").strip(),
                 "location": "; ".join(x for x in locs if x), "remote": bool(raw.get("isRemote")) or (raw.get("workplaceType") or "").lower() == "remote",
                 "url": _first(raw.get("jobUrl"), raw.get("applyUrl")), "published": raw.get("publishedAt") or "",
                 "text": raw.get("descriptionPlain", ""), "listed": raw.get("isListed", True),
-                "employment": raw.get("employmentType", "")}
+                "employment": raw.get("employmentType", ""),
+                "pay": pay_from_text((raw.get("compensation") or {}).get("scrapeableCompensationSalarySummary", ""))}
     raise ValueError(f"unknown provider {provider}")
+
+
+def _lever_pay(rng):
+    if isinstance(rng, dict) and "year" in str(rng.get("interval", "")).lower() and rng.get("min") and rng.get("max"):
+        return int(rng["min"]), int(rng["max"])
+    return None
 
 
 def jobs_from_feed(provider: str, payload, company: str) -> list:
@@ -111,6 +118,39 @@ def title_matches(title: str, cfg: dict):
     return True, score, reasons
 
 
+# ---------- pay ----------
+MONEY = r"\$\s?(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?\s?[kK])"
+RANGE = re.compile(MONEY + r"\s*(?:-|–|—|to|and)\s*\$?\s?(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?\s?[kK])")
+ONE = re.compile(MONEY)
+
+
+def _amount(text: str):
+    text = text.replace(",", "").replace(" ", "")
+    return float(text[:-1]) * 1000 if text[-1] in "kK" else float(text)
+
+
+def pay_from_text(text: str):
+    """(low, high) yearly USD from the first '$a - $b' range in the posting, or None. Hourly or tiny numbers are ignored."""
+    for m in RANGE.finditer(text or ""):
+        lo, hi = sorted((_amount(m.group(1)), _amount(m.group(2))))
+        if 40_000 <= lo and hi <= 3_000_000:
+            return int(lo), int(hi)
+    return None
+
+
+def pay_label(pay) -> str:
+    if not pay:
+        return "pay: not stated"
+    f = lambda v: f"${v / 1000:.0f}k" if v % 1000 == 0 or v >= 100_000 else f"${v / 1000:.1f}k"
+    return f"pay: {f(pay[0])} to {f(pay[1])} base"
+
+
+def pay_ok(pay, cfg) -> bool:
+    """Unknown pay passes (the bot cannot tell); a known range whose top is below the minimum does not."""
+    floor = cfg.get("min_pay")
+    return not floor or not pay or pay[1] >= floor
+
+
 YEARS = re.compile(r"(\d{1,2})\s*\+?\s*(?:-|–|to\s*\d{1,2}\s*)?(?:\d{1,2}\s*)?\+?\s*(?:years?|yrs?)\b[^.\n]{0,80}?experience"
                    r"|experience[^.\n]{0,60}?(\d{1,2})(?:\s*(?:-|–|to)\s*\d{1,2})?\s*\+?\s*(?:years?|yrs?)\b", re.I)
 
@@ -140,6 +180,7 @@ def score_job(job: dict, cfg: dict, now=None):
         return None                                           # the feed says intern, contract or part time
     if not location_ok(job["location"], job["remote"], cfg):
         return None
+    score += cfg.get("tier_bonus", {}).get(str(job.get("tier", 0)), 0)
     if has(job["location"].lower(), cfg.get("home_locations", [])):
         score += 2
     elif job["remote"]:
@@ -188,6 +229,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             errors.append(f"{name}: HTTP {status}")
             continue
         for job in jobs_from_feed(provider, payload, name):
+            job["tier"] = company.get("tier", 0)
             scored = score_job(job, cfg, now)
             if scored:
                 job["score"], job["reasons"] = scored
@@ -209,14 +251,22 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             if fetched >= DETAIL_LIMIT * 2:
                 continue
             fetched += 1
-            status, detail = await get_json(f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs/{job['gh_id']}")
+            status, detail = await get_json(f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs/{job['gh_id']}?pay_transparency=true")
             if status == 200 and isinstance(detail, dict):
                 job["text"] = re.sub(r"<[^>]+>", " ", detail.get("content", "")).replace("&nbsp;", " ")
+                for r in detail.get("pay_input_ranges") or []:
+                    if r.get("currency_type") == "USD" and r.get("min_cents") and r.get("max_cents"):
+                        job["pay"] = (int(r["min_cents"]) // 100, int(r["max_cents"]) // 100)
+                        break
+        job["pay"] = job.get("pay") or pay_from_text(job["text"])
+        if not pay_ok(job["pay"], cfg):
+            skipped_keys.append(job["key"])                      # known pay below your minimum
+            continue
         years = required_years(job["text"])
         if max_years and years is not None and years >= max_years:
             skipped_keys.append(job["key"])                      # asks for too much experience: never show it again
             continue
-        job["flags"] = visa_flags(job["text"]) + ([f"asks for {years}+ years"] if years and years >= 3 else [])
+        job["flags"] = [pay_label(job["pay"])] + visa_flags(job["text"]) + ([f"asks for {years}+ years"] if years and years >= 3 else [])
         shown.append((provider, slug, job))
         per_company[job["company"]] = per_company.get(job["company"], 0) + 1
     if mark:
@@ -227,7 +277,8 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     lines = [f"{len(shown)} new role{'s' if len(shown) != 1 else ''} (about {max(remaining, 0)} more waiting):"]
     for _, _, j in shown:
         where = j["location"] if len(j["location"]) <= 60 else j["location"][:57] + "..."
-        lines.append(f"\n• {j['company']}: {j['title']}\n  {where}{' (remote ok)' if j['remote'] else ''}\n  {'; '.join(j['flags'])}\n  {j['url']}")
+        tier = f"  [tier {j['tier']}]" if j.get("tier") else ""
+        lines.append(f"\n• {j['company']}{tier}: {j['title']}\n  {where}{' (remote ok)' if j['remote'] else ''}\n  {'; '.join(j['flags'])}\n  {j['url']}")
     lines.append("\nVisa and experience notes are only hints from the posting text. Read the posting before relying on them.")
     text = "\n".join(lines)[:OUTPUT_CHARS] + _errs(errors)
     if mark:
