@@ -56,11 +56,16 @@ A separate chain handles image generation. The bot stays responsive even when ev
 | Google Calendar | read, create, and modify events (OAuth 2.0) |
 | Gmail | read and send (OAuth 2.0) |
 | Todoist | task management |
+| Email digest | `/digest` and a daily 8 AM summary of event and career emails from your own Gmail (see below) |
 | DuckDuckGo | live web search |
 | PandaScore | esports fixtures and results |
 | PDF / HTML | document parsing and summarization |
 
 Multiple Google accounts are supported — each is authorized separately and stored as its own token file.
+
+### Email digest
+
+`digest.py` reads recent mail from a short list of senders (Campus Groups, Luma, Handshake, the school's own address) through the Gmail API and asks the model for a few lines grouped into events, career items and deadlines. It never logs in to a website or stores a password. The mail text is treated as untrusted: the model is told to use only what is written, to ignore instructions inside it, and it has no tools to call. Reported messages are remembered so nothing repeats, and a failed summary does not mark them as seen. It is tested against fake Gmail responses; it has not yet been run against a large real mailbox.
 
 ## Stack
 
@@ -91,7 +96,7 @@ pip install pytest
 pytest -q
 ```
 
-20 tests cover the logic that does not need the network: Markdown to Telegram HTML, the quota-aware model routing (cooldowns, unavailable models, the cheap tier for small talk), vector packing and cosine similarity, the SQLite memory with semantic recall, and the email and match-time formatters. The Telegram, Gemini and Google libraries are replaced with stand-ins in `tests/conftest.py`, so the tests run without credentials. The integrations themselves (Calendar, Gmail, Todoist, search) are not covered by tests.
+39 tests cover the logic that does not need the network (20 for the core bot, 19 for the digest with fake Gmail responses, including the daily timer across a clock change and a prompt-injection check): Markdown to Telegram HTML, the quota-aware model routing (cooldowns, unavailable models, the cheap tier for small talk), vector packing and cosine similarity, the SQLite memory with semantic recall, and the email and match-time formatters. The Telegram, Gemini and Google libraries are replaced with stand-ins in `tests/conftest.py`, so the tests run without credentials. The integrations themselves (Calendar, Gmail, Todoist, search) are not covered by tests.
 
 ## Configuration
 
@@ -105,6 +110,8 @@ All secrets come from the environment — nothing is hardcoded. See `.env.exampl
 | `HONCHO_API_KEY` | user-memory service |
 | `TODOIST_TOKEN` | Todoist API |
 | `PANDASCORE_TOKEN` | esports data |
+| `DIGEST_HOUR` | hour (New York time) of the daily digest, default 8 |
+| `DIGEST_DAILY` | set to `off` to disable the daily message |
 
 Access is restricted to `ALLOWED_USER_ID`; every handler checks it before doing any work.
 

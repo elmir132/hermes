@@ -19,6 +19,8 @@ from aiogram.types import Message, Document, BufferedInputFile
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
+import digest
+
 # ── Markdown → Telegram HTML ──────────────────────────────────────────────────
 def md_to_html(text: str) -> str:
     """Convert Gemini markdown to Telegram-safe HTML."""
@@ -59,6 +61,8 @@ TODOIST_TOKEN       = os.environ.get("TODOIST_TOKEN", "")
 TAVILY_API_KEY      = os.environ.get("TAVILY_API_KEY", "")
 TMDB_TOKEN          = os.environ.get("TMDB_TOKEN", "")
 PANDASCORE_TOKEN    = os.environ.get("PANDASCORE_TOKEN", "")
+DIGEST_HOUR         = int(os.environ.get("DIGEST_HOUR", "8"))        # New York time
+DIGEST_DAILY        = os.environ.get("DIGEST_DAILY", "on").lower() != "off"
 MAX_RECENT      = 20
 MAX_SEMANTIC   = 5
 DB_PATH        = Path(__file__).parent / "hermes.db"
@@ -1481,6 +1485,38 @@ async def cmd_gmail(msg: Message):
     except Exception:
         await msg.answer(result)
 
+# ── Event and career digest (reads your own Gmail only) ───────────────────────
+async def _digest_get(url, token, params):
+    async with httpx.AsyncClient(timeout=20) as client:
+        r = await client.get(url, headers={"Authorization": f"Bearer {token}"}, params=params)
+    try:
+        return r.status_code, r.json()
+    except Exception:
+        return r.status_code, {}
+
+async def run_digest(mark: bool = True, include_seen: bool = False) -> str:
+    accounts = await asyncio.to_thread(_all_creds)
+    return await digest.build_digest([(n, c.token) for n, c in accounts], _digest_get, one_shot,
+                                     DB_PATH, mark=mark, include_seen=include_seen)
+
+async def _digest_loop():
+    await asyncio.sleep(30)
+    while True:
+        await asyncio.sleep(digest.seconds_until(DIGEST_HOUR))
+        try:
+            if await asyncio.to_thread(_all_creds):          # stay quiet while Google sign-ins are expired
+                await bot.send_message(ALLOWED_USER, "📬 Morning digest\n\n" + await run_digest(mark=True))
+        except Exception:
+            pass
+        await asyncio.sleep(60)
+
+@dp.message(Command("digest"))
+async def cmd_digest(msg: Message):
+    if not allowed(msg): return
+    await bot.send_chat_action(msg.chat.id, "typing")
+    show_all = "all" in msg.text.lower().split()
+    await msg.answer(await run_digest(mark=False, include_seen=show_all))
+
 @dp.message(Command("tasks"))
 async def cmd_tasks(msg: Message):
     if not allowed(msg): return
@@ -1666,6 +1702,8 @@ async def main():
     init_honcho()
     if PANDASCORE_TOKEN:
         asyncio.create_task(_navi_poll_loop())
+    if DIGEST_DAILY:
+        asyncio.create_task(_digest_loop())
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
