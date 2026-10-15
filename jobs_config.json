@@ -191,19 +191,28 @@
   "security engineer",
   "llm",
   "nlp",
-  "generative"
- ],
- "include_title": [
+  "generative",
   "software engineer",
   "software developer",
+  "swe",
   "backend",
   "back end",
   "full stack",
   "fullstack",
+  "platform engineer",
+  "infrastructure engineer",
+  "distributed systems",
+  "site reliability",
+  "sre",
+  "devops",
   "product engineer",
+  "application engineer",
+  "api"
+ ],
+ "include_title": [
   "data engineer",
   "developer",
-  "engineer"
+  "security engineer"
  ],
  "exclude_title": [
   "senior",
@@ -265,7 +274,27 @@
   "enablement",
   "deployment strategist",
   "analyst",
-  "research scientist"
+  "research scientist",
+  "hardware",
+  "mechanical",
+  "electrical",
+  "civil",
+  "manufacturing",
+  "facilities",
+  "network",
+  "firmware",
+  "sales engineer",
+  "solutions engineer",
+  "field",
+  "support engineer",
+  "quality",
+  "test engineer",
+  "qa",
+  "it",
+  "macos",
+  "helpdesk",
+  "corporate",
+  "workplace"
  ],
  "junior_words": [
   "junior",

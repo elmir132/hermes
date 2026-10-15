@@ -81,6 +81,21 @@ class TitleTests(unittest.TestCase):
         self.assertGreater(b, a)
 
 
+class SweFocusTests(unittest.TestCase):
+    def test_software_roles_rank_as_high_as_ml_roles(self):
+        swe = jobs.title_matches("Software Engineer, Backend", CFG)[1]
+        ml = jobs.title_matches("Machine Learning Engineer", CFG)[1]
+        self.assertEqual(swe, ml)
+
+    def test_swe_titles_match(self):
+        for t in ["Software Engineer", "Backend Engineer", "Full Stack Engineer", "Platform Engineer", "Infrastructure Engineer", "Software Engineer, New Grad", "Site Reliability Engineer"]:
+            self.assertTrue(jobs.title_matches(t, CFG)[0], t)
+
+    def test_unrelated_engineers_do_not(self):
+        for t in ["Mechanical Engineer", "Hardware Engineer", "Sales Engineer", "Network Engineer", "Test Engineer", "Engineer", "IT Systems Engineer, Client Platform Engineer, macOS"]:
+            self.assertFalse(jobs.title_matches(t, CFG)[0], t)
+
+
 class FullTimeTests(unittest.TestCase):
     def test_internships_and_contracts_are_skipped_by_title(self):
         for t in ["Machine Learning Intern", "AI Research Internship", "Software Engineer (Contract)", "ML Engineer Co-op", "Backend Engineer, Part Time", "Summer Fellow, AI"]:
