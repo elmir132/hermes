@@ -19,6 +19,7 @@ from aiogram.types import Message, Document, BufferedInputFile
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
+import apply
 import digest
 import jobs
 
@@ -1528,9 +1529,15 @@ async def _jobs_get(url):
     except Exception:
         return 0, {}
 
+LAST_JOBS: list = []          # what /jobs showed last, so "/fit 3" and "/applied 3" know which role you mean
+LAST_FIT: dict = {}           # job url -> resume name suggested by /fit
+
 async def run_jobs(mark: bool = True, include_seen: bool = False) -> str:
     cfg = await asyncio.to_thread(jobs.load_config)
-    text, _, _ = await jobs.scan(cfg, _jobs_get, DB_PATH, mark=mark, include_seen=include_seen)
+    shown: list = []
+    text, _, _ = await jobs.scan(cfg, _jobs_get, DB_PATH, mark=mark, include_seen=include_seen, collect=shown)
+    if shown:
+        LAST_JOBS[:] = shown
     return text
 
 async def _jobs_loop():
@@ -1549,6 +1556,108 @@ async def cmd_jobs(msg: Message):
     await bot.send_chat_action(msg.chat.id, "typing")
     show_all = "all" in msg.text.lower().split()
     await msg.answer(await run_jobs(mark=not show_all, include_seen=show_all))
+
+# ── Applying: tracker, fit check, follow-ups (nothing here applies to anything) ──
+def _args(msg: Message, name: str) -> str:
+    return msg.text.removeprefix("/" + name).strip()
+
+def _pick_job(arg: str):
+    first = arg.split()[0] if arg.split() else ""
+    if first.isdigit() and 1 <= int(first) <= len(LAST_JOBS):
+        return LAST_JOBS[int(first) - 1]
+    return None
+
+@dp.message(Command("fit"))
+async def cmd_fit(msg: Message):
+    if not allowed(msg): return
+    job = _pick_job(_args(msg, "fit"))
+    if not job:
+        await msg.answer("Usage: /fit <number from the last /jobs list>. Send /jobs first if the list is empty.")
+        return
+    await bot.send_chat_action(msg.chat.id, "typing")
+    profile = await asyncio.to_thread(apply.load_profile)
+    score, text, resume = await apply.fit_check(profile, job, one_shot)
+    if resume:
+        LAST_FIT[job["url"]] = resume
+    await msg.answer(f"{job['company']}: {job['title']}\n\n{text}\n\nSave it with /save or mark it with /applied {_args(msg, 'fit').split()[0]}.")
+
+@dp.message(Command("save"))
+async def cmd_save(msg: Message):
+    if not allowed(msg): return
+    job = _pick_job(_args(msg, "save"))
+    if not job:
+        await msg.answer("Usage: /save <number from the last /jobs list>")
+        return
+    i = apply.add(DB_PATH, job["company"], job["title"], job["url"], "saved", resume=LAST_FIT.get(job["url"], ""))
+    await msg.answer(f"Saved #{i}: {job['company']} - {job['title']}\nWhen you apply, send /applied {_args(msg, 'save').split()[0]} (I will remind you to follow up in a week).")
+
+@dp.message(Command("applied"))
+async def cmd_applied(msg: Message):
+    if not allowed(msg): return
+    arg = _args(msg, "applied")
+    profile = await asyncio.to_thread(apply.load_profile) or {}
+    known = set(profile.get("resumes", {}))
+    if "|" in arg:                                       # /applied Company | Role | resume (optional)
+        parts = [p.strip() for p in arg.split("|")]
+        company, role, resume = parts[0], parts[1] if len(parts) > 1 else "", (parts[2].lower() if len(parts) > 2 else "")
+        url = ""
+        if not company or not role:
+            await msg.answer("Usage: /applied <number>  or  /applied Company | Role | resume (resume is optional)")
+            return
+    else:
+        job = _pick_job(arg)
+        if not job:
+            await msg.answer("Usage: /applied <number from the last /jobs list> [resume name]  or  /applied Company | Role | resume")
+            return
+        words = arg.split()
+        resume = words[1].lower() if len(words) > 1 else LAST_FIT.get(job["url"], "")
+        company, role, url = job["company"], job["title"], job["url"]
+    if resume and known and resume not in known:
+        await msg.answer("I don't know that resume version. Choose one of: " + ", ".join(sorted(known)))
+        return
+    i = apply.add(DB_PATH, company, role, url, "applied", resume=resume)
+    await msg.answer(f"Marked #{i} as applied: {company} - {role}" + (f" (resume: {resume})" if resume else "") + ".\nI will remind you to follow up in 7 days. /pipeline shows everything.")
+
+@dp.message(Command("pipeline"))
+async def cmd_pipeline(msg: Message):
+    if not allowed(msg): return
+    await msg.answer(apply.pipeline_text(DB_PATH))
+
+@dp.message(Command("mark"))
+async def cmd_mark(msg: Message):
+    if not allowed(msg): return
+    words = _args(msg, "mark").split()
+    if len(words) != 2 or not words[0].isdigit():
+        await msg.answer("Usage: /mark <id> <" + "|".join(apply.STATUSES) + ">   (ids are in /pipeline)")
+        return
+    try:
+        done = apply.set_status(DB_PATH, int(words[0]), words[1])
+    except ValueError as e:
+        await msg.answer(str(e))
+        return
+    await msg.answer(f"Updated #{words[0]} to {words[1].lower()}." if done else f"No application #{words[0]}.")
+
+@dp.message(Command("note"))
+async def cmd_note(msg: Message):
+    if not allowed(msg): return
+    words = _args(msg, "note").split(maxsplit=1)
+    if len(words) != 2 or not words[0].isdigit():
+        await msg.answer("Usage: /note <id> <text>")
+        return
+    await msg.answer("Noted." if apply.note(DB_PATH, int(words[0]), words[1]) else f"No application #{words[0]}.")
+
+async def _followup_loop():
+    await asyncio.sleep(60)
+    while True:
+        await asyncio.sleep(digest.seconds_until(9))
+        try:
+            due = apply.due_follow_ups(DB_PATH)
+            if due:
+                await bot.send_message(ALLOWED_USER, apply.follow_up_text(due))
+                apply.mark_followed_up(DB_PATH, [d["id"] for d in due])
+        except Exception:
+            pass
+        await asyncio.sleep(60)
 
 @dp.message(Command("tasks"))
 async def cmd_tasks(msg: Message):
@@ -1739,6 +1848,7 @@ async def main():
         asyncio.create_task(_digest_loop())
     if JOBS_DAILY:
         asyncio.create_task(_jobs_loop())
+    asyncio.create_task(_followup_loop())
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

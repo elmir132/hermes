@@ -22,3 +22,5 @@ env/
 .DS_Store
 .idea/
 .vscode/
+fit_profile.json
+applications.db

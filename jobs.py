@@ -172,6 +172,17 @@ def visa_flags(text: str) -> list:
     return flags or ["visa: not stated"]
 
 
+def age_days(job: dict, now=None):
+    """Whole days since the posting was published, or None when the feed gives no usable date."""
+    try:
+        published = datetime.fromisoformat((job.get("published") or "").replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if published.tzinfo is None:
+        published = published.replace(tzinfo=timezone.utc)
+    return max((now or datetime.now(timezone.utc)) - published, timedelta(0)).days
+
+
 def score_job(job: dict, cfg: dict, now=None):
     ok, score, reasons = title_matches(job["title"], cfg)
     if not ok:
@@ -186,14 +197,12 @@ def score_job(job: dict, cfg: dict, now=None):
     elif job["remote"]:
         score += 1
     now = now or datetime.now(timezone.utc)
-    try:
-        published = datetime.fromisoformat(job["published"].replace("Z", "+00:00"))
-        if published.tzinfo is None:
-            published = published.replace(tzinfo=timezone.utc)
-        if now - published <= timedelta(days=14):
+    age = age_days(job, now)
+    if age is not None:
+        if cfg.get("max_age_days") and age > cfg["max_age_days"]:
+            return None                                       # probably filled or forgotten
+        if age <= 14:
             score += 1; reasons.append("new")
-    except ValueError:
-        pass
     return score, reasons
 
 
@@ -218,7 +227,7 @@ def mark_seen(path, keys, now=None):
 
 
 # ---------- the scan ----------
-async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None):
+async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None):
     """get_json(url) -> (status_code, parsed_json). Returns (text_to_send, found_count, errors)."""
     candidates, errors = [], []
     for company in cfg.get("companies", []):
@@ -266,6 +275,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
         if max_years and years is not None and years >= max_years:
             skipped_keys.append(job["key"])                      # asks for too much experience: never show it again
             continue
+        job["age"] = age_days(job, now)
         job["flags"] = [pay_label(job["pay"])] + visa_flags(job["text"]) + ([f"asks for {years}+ years"] if years and years >= 3 else [])
         shown.append((provider, slug, job))
         per_company[job["company"]] = per_company.get(job["company"], 0) + 1
@@ -274,11 +284,15 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     if not shown:
         return "No new matching roles today." + _errs(errors), 0, errors
     remaining = len(fresh) - len(shown) - len(skipped_keys)      # roughly; capped companies keep their extras for later
+    if collect is not None:                                      # lets the bot answer "/fit 3" and "/applied 3" later
+        collect[:] = [{"company": j["company"], "title": j["title"], "location": j["location"], "url": j["url"],
+                       "text": j["text"][:5000], "pay": j["pay"], "tier": j.get("tier", 0)} for _, _, j in shown]
     lines = [f"{len(shown)} new role{'s' if len(shown) != 1 else ''} (about {max(remaining, 0)} more waiting):"]
-    for _, _, j in shown:
+    for n, (_, _, j) in enumerate(shown, 1):
         where = j["location"] if len(j["location"]) <= 60 else j["location"][:57] + "..."
         tier = f"  [tier {j['tier']}]" if j.get("tier") else ""
-        lines.append(f"\n• {j['company']}{tier}: {j['title']}\n  {where}{' (remote ok)' if j['remote'] else ''}\n  {'; '.join(j['flags'])}\n  {j['url']}")
+        posted = f" · posted {j['age']}d ago" if j.get("age") is not None else ""
+        lines.append(f"\n• {j['company']}{tier}: {j['title']}  #{n}\n  {where}{' (remote ok)' if j['remote'] else ''}{posted}\n  {'; '.join(j['flags'])}\n  {j['url']}")
     lines.append("\nVisa and experience notes are only hints from the posting text. Read the posting before relying on them.")
     text = "\n".join(lines)[:OUTPUT_CHARS] + _errs(errors)
     if mark:

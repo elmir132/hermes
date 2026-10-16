@@ -70,6 +70,10 @@ Multiple Google accounts are supported — each is authorized separately and sto
 
 Checked live against 35 company boards in about 13 seconds with no errors on the first run. What it cannot see: companies on other systems, roles that need a login to view, and any location written in a way the rules do not recognize.
 
+### Applying: tracker, fit check, follow-ups
+
+`/jobs` numbers each role. `/fit 3` asks the model how well role 3 fits the resume summary on the server (a score from 1 to 5, why, the gaps, and which of ten resume versions to send); the posting is treated as untrusted text and the model has no tools. `/save 3` and `/applied 3 [resume]` record it in a small tracker (`/applied Company | Role | resume` works for roles found elsewhere), `/pipeline` lists everything by status, `/mark <id> interview|offer|rejected|withdrawn` updates it, and a week after an application the bot reminds you to follow up, once. Postings older than 60 days are dropped and each result shows how long ago it was posted. The bot never applies to anything. The resume summary (`fit_profile.json`) has no contact details and is kept out of the repository.
+
 ### Email digest
 
 `digest.py` reads recent mail from a short list of senders (Campus Groups, Luma, Handshake, the school's own address) through the Gmail API and asks the model for a few lines grouped into events, career items and deadlines. It never logs in to a website or stores a password. The mail text is treated as untrusted: the model is told to use only what is written, to ignore instructions inside it, and it has no tools to call. Reported messages are remembered so nothing repeats, and a failed summary does not mark them as seen. It is tested against fake Gmail responses; it has not yet been run against a large real mailbox.
@@ -103,7 +107,7 @@ pip install pytest
 pytest -q
 ```
 
-77 tests cover the logic that does not need the network (20 for the core bot, 19 for the digest with fake Gmail responses, 38 for the job watcher with fake feeds), including the daily timer across a clock change and checks that mail or posting text cannot change what the bot does: Markdown to Telegram HTML, the quota-aware model routing (cooldowns, unavailable models, the cheap tier for small talk), vector packing and cosine similarity, the SQLite memory with semantic recall, and the email and match-time formatters. The Telegram, Gemini and Google libraries are replaced with stand-ins in `tests/conftest.py`, so the tests run without credentials. The integrations themselves (Calendar, Gmail, Todoist, search) are not covered by tests.
+92 tests cover the logic that does not need the network (20 for the core bot, 19 for the digest with fake Gmail responses, 38 for the job watcher plus 15 for the tracker and fit check with fake feeds), including the daily timer across a clock change and checks that mail or posting text cannot change what the bot does: Markdown to Telegram HTML, the quota-aware model routing (cooldowns, unavailable models, the cheap tier for small talk), vector packing and cosine similarity, the SQLite memory with semantic recall, and the email and match-time formatters. The Telegram, Gemini and Google libraries are replaced with stand-ins in `tests/conftest.py`, so the tests run without credentials. The integrations themselves (Calendar, Gmail, Todoist, search) are not covered by tests.
 
 ## Configuration
 
