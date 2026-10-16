@@ -1708,6 +1708,13 @@ async def cmd_campus(msg: Message):
     jobs_cfg = await asyncio.to_thread(jobs.load_config)
     tiers = {c["name"]: c.get("tier", 9) for c in jobs_cfg.get("companies", []) if c.get("tier")}
     cfg = await asyncio.to_thread(luma.load_config)
+    ics_all = os.environ.get("CAMPUS_ICS_ALL", "").strip()
+    if ics_all:                                                   # Campus Groups' own calendar feed: no Google sign-in needed
+        async def get_text(url):
+            s, body = await _jobs_get_html(url)
+            return s, body
+        await msg.answer(await campus.build_campus_ics(ics_all, os.environ.get("CAMPUS_ICS_MINE", "").strip(), get_text, cfg, tiers))
+        return
     await msg.answer(await campus.build_campus([(n, c.token) for n, c in accounts], _digest_get, one_shot, cfg, tiers))
 
 @dp.message(Command("tasks"))

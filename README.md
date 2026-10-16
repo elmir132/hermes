@@ -76,7 +76,7 @@ Besides those three, it reads Amazon's job search and the job lists of companies
 
 `/hackathons mine` lists the events you have signed up for (kept in the config's `registered` list, taken from your Luma confirmation emails) with their times, places and clashes with classes, other commitments and each other, and those events are hidden from the recommendations and counted as busy time for the next ones.
 
-`/campus` lists company info sessions and recruiting events (Zoom or on campus) from the career emails Campus Groups and Career Management already send you. Campus Groups itself needs a login, so the bot only reads your own mail. The model must answer with JSON only, every field is validated in code (dates, times, no links or markup) and sessions are sorted, ranked by company tier and checked against your schedule, so nothing in an email can add a link or an invented session. It needs the Google sign-in.
+`/campus` lists company info sessions and recruiting events (Zoom or on campus). Campus Groups itself needs a login, so the bot does not open it. Instead it uses Campus Groups' own calendar feed (the "Subscribe to Calendars" links, set in the environment as `CAMPUS_ICS_ALL` and optionally `CAMPUS_ICS_MINE` for the events you registered for; the links may contain a private key and are never printed or logged), which needs no login or Google sign-in. Without those, it falls back to reading the career emails Campus Groups and Career Management already send you. The model must answer with JSON only, every field is validated in code (dates, times, no links or markup) and sessions are sorted, ranked by company tier and checked against your schedule, so nothing in an email can add a link or an invented session. It needs the Google sign-in.
 
 ### Applying: tracker, fit check, follow-ups
 
@@ -115,7 +115,7 @@ pip install pytest
 pytest -q
 ```
 
-169 tests cover the logic that does not need the network (20 for the core bot, 19 for the digest with fake Gmail responses, the rest for the job watcher, the Amazon and Workday readers, the tracker and the fit check, all with fake feeds), including the daily timer across a clock change and checks that mail or posting text cannot change what the bot does: Markdown to Telegram HTML, the quota-aware model routing (cooldowns, unavailable models, the cheap tier for small talk), vector packing and cosine similarity, the SQLite memory with semantic recall, and the email and match-time formatters. The Telegram, Gemini and Google libraries are replaced with stand-ins in `tests/conftest.py`, so the tests run without credentials. The integrations themselves (Calendar, Gmail, Todoist, search) are not covered by tests.
+182 tests cover the logic that does not need the network (20 for the core bot, 19 for the digest with fake Gmail responses, the rest for the job watcher, the Amazon and Workday readers, the tracker and the fit check, all with fake feeds), including the daily timer across a clock change and checks that mail or posting text cannot change what the bot does: Markdown to Telegram HTML, the quota-aware model routing (cooldowns, unavailable models, the cheap tier for small talk), vector packing and cosine similarity, the SQLite memory with semantic recall, and the email and match-time formatters. The Telegram, Gemini and Google libraries are replaced with stand-ins in `tests/conftest.py`, so the tests run without credentials. The integrations themselves (Calendar, Gmail, Todoist, search) are not covered by tests.
 
 ## Configuration
 

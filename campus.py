@@ -1,4 +1,4 @@
-"""Company sessions on campus (Zoom or in person), read from your own Cornell Tech career emails.
+"""Company sessions on campus (Zoom or in person), read from Campus Groups' own calendar feed or from your career emails.
 
 Campus Groups needs your login, so the bot does not open it. It reads the emails Campus Groups and Career
 Management already send you (the weekly Career Digest, info session reminders, RSVP notices), asks the model to list
@@ -8,7 +8,7 @@ an instruction or a made-up session. It never RSVPs for you.
 """
 import json
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import digest as dg
@@ -141,3 +141,140 @@ async def build_campus(accounts, get_json, summarize, cfg: dict, tiers: dict, to
     sessions = decorate(parse_sessions(answer, today), tiers, cfg)
     policy = any(re.search(r"three[- ]strike|attendance is mandatory", b, re.I) for _, _, b in bodies)
     return format_sessions(sessions, policy, notes)
+
+
+# ---------- Campus Groups calendar feed (the "Subscribe to Calendars" links) ----------
+# The links are made for calendar apps and may contain a private key, so they come from the environment,
+# are never printed or logged, and are used only to read the file.
+SESSION_WORDS = re.compile(r"info(?:rmation)? session|recruit|career|employer|hiring|networking|coffee chat|fireside|panel|meet(?: the)? team|tech talk|office hours with|open house", re.I)
+WHO_WORDS = re.compile(r"open to|only open|class of|2027|2028|grad|master|international|cpt|opt|sponsorship|citizen|visa", re.I)
+
+
+def _unfold(text: str) -> list:
+    lines = []
+    for raw in (text or "").replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        if raw[:1] in (" ", "\t") and lines:
+            lines[-1] += raw[1:]
+        else:
+            lines.append(raw)
+    return lines
+
+
+def _unescape(value: str) -> str:
+    return value.replace("\\n", " ").replace("\\N", " ").replace("\\,", ",").replace("\\;", ";").replace("\\\\", "\\")
+
+
+def _when(name: str, params: str, value: str):
+    """An ICS date or date-time as an aware New York datetime, or None."""
+    value = value.strip()
+    try:
+        if "VALUE=DATE" in params.upper() or re.fullmatch(r"\d{8}", value):
+            return datetime.strptime(value[:8], "%Y%m%d").replace(tzinfo=NY)
+        if value.endswith("Z"):
+            return datetime.strptime(value, "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc).astimezone(NY)
+        tz = re.search(r"TZID=([^;:]+)", params, re.I)
+        zone = ZoneInfo(tz.group(1)) if tz else NY
+        return datetime.strptime(value[:15], "%Y%m%dT%H%M%S").replace(tzinfo=zone).astimezone(NY)
+    except (ValueError, KeyError):
+        return None
+
+
+def parse_ics(text: str) -> list:
+    """VEVENT blocks as dicts: title, start, end, place, description, url. Broken events are skipped."""
+    events, current = [], None
+    for line in _unfold(text):
+        if line.strip() == "BEGIN:VEVENT":
+            current = {}
+        elif line.strip() == "END:VEVENT":
+            if current and current.get("start") and current.get("title"):
+                current.setdefault("end", current["start"] + timedelta(hours=1))
+                events.append(current)
+            current = None
+        elif current is not None and ":" in line:
+            head, _, value = line.partition(":")
+            name, _, params = head.partition(";")
+            name = name.upper()
+            if name == "SUMMARY":
+                current["title"] = clean(_unescape(value), 120)
+            elif name == "DTSTART":
+                current["start"] = _when(name, params, value)
+            elif name == "DTEND":
+                current["end"] = _when(name, params, value)
+            elif name == "LOCATION":
+                current["place"] = clean(_unescape(value), 60)
+            elif name == "DESCRIPTION":
+                current["description"] = re.sub(r"\s+", " ", _unescape(value))[:1500]
+            elif name == "STATUS":
+                current["status"] = value.strip().upper()
+    return [e for e in events if e.get("status") != "CANCELLED" and e["end"] and e["start"]]
+
+
+def _mode(place: str, description: str) -> str:
+    text = f"{place} {description}".lower()
+    if re.search(r"zoom|virtual|online|webex|teams meeting", text):
+        return "Zoom or virtual"
+    return "on campus" if place else ""
+
+
+def _who(description: str) -> str:
+    for sentence in re.split(r"(?<=[.!?])\s+", description or ""):
+        if WHO_WORDS.search(sentence) and len(sentence) < 220:
+            return clean(sentence, 120)
+    return ""
+
+
+def ics_sessions(all_text: str, mine_text: str, cfg: dict, tiers: dict, today=None, days: int = 45) -> list:
+    """Company sessions in the school-wide feed that look like recruiting or career events, flagged if you registered."""
+    today = today or datetime.now(NY).date()
+    lo = datetime.combine(today, datetime.min.time()).replace(tzinfo=NY)
+    hi = lo + timedelta(days=days)
+    mine = {(e["title"].lower(), e["start"].isoformat()) for e in parse_ics(mine_text)} if mine_text else set()
+    out, seen = [], set()
+    for e in parse_ics(all_text):
+        if not (lo <= e["end"] and e["start"] <= hi):
+            continue
+        desc = e.get("description", "")
+        tier = tier_of(e["title"], tiers)
+        if not (SESSION_WORDS.search(e["title"]) or tier < 9 or SESSION_WORDS.search(desc[:300])):
+            continue
+        key = (e["title"].lower(), e["start"].isoformat())
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append({"company": e["title"], "what": "", "start_dt": e["start"], "end_dt": e["end"], "mode": _mode(e.get("place", ""), desc), "place": e.get("place", ""),
+                    "who": _who(desc), "register_by": "", "tier": tier, "registered": key in mine, "career_mgmt": bool(re.search(r"career management|ctcm|three[- ]strike", desc, re.I))})
+    for s in out:
+        s["clashes"] = luma.clashes(s["start_dt"], s["end_dt"], cfg)
+    out.sort(key=lambda s: (s["start_dt"], s["tier"]))
+    return out
+
+
+def format_ics_sessions(sessions: list) -> str:
+    if not sessions:
+        return "I found no company sessions in the Campus Groups calendar for the next few weeks."
+    lines = [f"{len(sessions)} career and company event{'s' if len(sessions) != 1 else ''} on the Cornell Tech calendar, soonest first:"]
+    for s in sessions[:14]:
+        d, e = s["start_dt"], s["end_dt"]
+        when = d.strftime("%a %b %d, %-I:%M %p") + (e.strftime(" to %-I:%M %p") if e.date() == d.date() and e != d else "")
+        where = " · ".join(x for x in (s["mode"], s["place"]) if x and x.lower() not in s["mode"].lower()) or s["mode"]
+        lines.append(f"\n• {s['company']}{' ⭐' if s['tier'] <= 2 else ''}{'  ✅ you are registered' if s['registered'] else ''}\n  {when}" + (f" · {where}" if where else "") +
+                     (f"\n  {s['who']}" if s["who"] else "") + (f"\n  ⚠️ clashes with {', '.join(s['clashes'])}" if s["clashes"] else ""))
+    if any(s["registered"] and s["career_mgmt"] for s in sessions):
+        lines.append("\nCareer Management's rule: attendance is mandatory once you RSVP, three strikes, and to cancel you must update your RSVP and email them at least 48 hours before.")
+    if len(sessions) > 14:
+        lines.append(f"\n(+{len(sessions) - 14} more later on)")
+    lines.append("\nFrom Campus Groups' own calendar feed. Check Campus Groups for changes. I never RSVP for you.")
+    return "\n".join(lines)[:3900]
+
+
+async def build_campus_ics(all_url: str, mine_url: str, get_text, cfg: dict, tiers: dict, today=None):
+    """get_text(url) -> (status, text). Returns the message to send."""
+    status, all_text = await get_text(all_url)
+    if status != 200 or "BEGIN:VCALENDAR" not in (all_text or ""):
+        return f"I couldn't read the Campus Groups calendar (HTTP {status}). The link may have changed, so copy it again from Subscribe to Calendars."
+    mine_text = ""
+    if mine_url:
+        s2, mine_text = await get_text(mine_url)
+        if s2 != 200 or "BEGIN:VCALENDAR" not in (mine_text or ""):
+            mine_text = ""
+    return format_ics_sessions(ics_sessions(all_text, mine_text, cfg, tiers, today))
