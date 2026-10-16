@@ -76,6 +76,15 @@ class SessionTests(unittest.TestCase):
         self.assertIn("CPT", sea["who"])
         self.assertEqual(by["Random Co Recruiting Night"]["mode"], "Zoom or virtual")
 
+    def test_social_events_are_not_company_sessions_even_with_a_company_word_or_a_panel(self):
+        feed = cal(vevent("Frozen Apple Hockey Game", ":20261128T170000Z", ":20261128T200000Z", "", "Discounted tickets for the game."),
+                   vevent("Pumpkin Decorating Contest!", ":20261028T160000Z", ":20261028T180000Z", "Studio", "Snacks and cider. Judged by a panel of faculty."))
+        self.assertEqual(campus.ics_sessions(feed, "", CFG, {"Apple": 1}, TODAY), [])
+
+    def test_a_description_that_clearly_recruits_counts(self):
+        feed = cal(vevent("Acme Spotlight", ":20261028T160000Z", ":20261028T180000Z", "Zoom", "Acme is recruiting for full-time roles. Join our info session."))
+        self.assertEqual([s["company"] for s in campus.ics_sessions(feed, "", CFG, {}, TODAY)], ["Acme Spotlight"])
+
     def test_registered_events_are_flagged_from_the_personal_feed(self):
         got = {s["company"]: s for s in campus.ics_sessions(self.ALL, cal(PALANTIR), CFG, TIERS, TODAY)}
         self.assertTrue(got["Palantir On-Campus Info Session"]["registered"])
@@ -97,6 +106,30 @@ class SessionTests(unittest.TestCase):
 
     def test_an_empty_calendar_is_explained(self):
         self.assertIn("no company sessions", campus.format_ics_sessions(campus.ics_sessions(cal(), "", CFG, TIERS, TODAY)))
+
+
+class MoreFeedTests(unittest.TestCase):
+    def test_several_links_are_combined_and_a_visa_talk_is_shown_as_relevant(self):
+        talk = cal(vevent("Visas After Graduation with a Lawyer", ":20261022T190000Z", ":20261022T200000Z", "Sign in to download the location"))
+        seen = []
+
+        async def get_text(url):
+            seen.append(url)
+            return {"https://a/1.ics": (200, cal(PALANTIR)), "https://a/2.ics": (200, talk), "https://a/3.ics": (500, "")}.get(url, (404, ""))
+        text = asyncio.run(campus.build_campus_ics("https://a/1.ics, https://a/2.ics webcal://a/3.ics", "", get_text, CFG, TIERS, TODAY))
+        self.assertIn("Palantir On-Campus Info Session", text)
+        self.assertIn("Visas After Graduation", text)
+        self.assertIn("relevant to you", text)
+        self.assertNotIn("Sign in to download", text)                       # the hidden-room placeholder is dropped
+        self.assertIn("1 of your calendar links could not be read", text)
+        self.assertIn("https://a/3.ics", seen)                              # webcal:// was converted
+
+    def test_only_relevant_non_company_events_are_added(self):
+        feed = cal(vevent("Pumpkin Decorating Contest", ":20261028T160000Z", ":20261028T170000Z"), vevent("Resume Workshop", ":20261027T160000Z", ":20261027T170000Z"))
+        text = campus.format_ics_sessions([], campus.ics_other(feed, CFG, [], TODAY))
+        self.assertIn("Resume Workshop", text)
+        self.assertNotIn("Pumpkin", text)
+        self.assertIn("No company sessions are in the feeds", text)
 
 
 class FeedTests(unittest.TestCase):

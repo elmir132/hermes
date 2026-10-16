@@ -147,6 +147,7 @@ async def build_campus(accounts, get_json, summarize, cfg: dict, tiers: dict, to
 # The links are made for calendar apps and may contain a private key, so they come from the environment,
 # are never printed or logged, and are used only to read the file.
 SESSION_WORDS = re.compile(r"info(?:rmation)? session|recruit|career|employer|hiring|networking|coffee chat|fireside|panel|meet(?: the)? team|tech talk|office hours with|open house", re.I)
+DESC_WORDS = re.compile(r"info(?:rmation)? session|recruit|hiring|employer|internship|full[- ]time (?:role|position|opportunit)", re.I)
 WHO_WORDS = re.compile(r"open to|only open|class of|2027|2028|grad|master|international|cpt|opt|sponsorship|citizen|visa", re.I)
 
 
@@ -201,7 +202,8 @@ def parse_ics(text: str) -> list:
             elif name == "DTEND":
                 current["end"] = _when(name, params, value)
             elif name == "LOCATION":
-                current["place"] = clean(_unescape(value), 60)
+                place = clean(_unescape(value), 60)
+                current["place"] = "" if place.lower().startswith("sign in") else place            # Campus Groups hides rooms from the public feed
             elif name == "DESCRIPTION":
                 current["description"] = re.sub(r"\s+", " ", _unescape(value))[:1500]
             elif name == "STATUS":
@@ -234,8 +236,8 @@ def ics_sessions(all_text: str, mine_text: str, cfg: dict, tiers: dict, today=No
         if not (lo <= e["end"] and e["start"] <= hi):
             continue
         desc = e.get("description", "")
-        tier = tier_of(e["title"], tiers)
-        if not (SESSION_WORDS.search(e["title"]) or tier < 9 or SESSION_WORDS.search(desc[:300])):
+        tier = tier_of(e["title"], tiers)                                  # a company name only ranks an event; it never makes it count
+        if not (SESSION_WORDS.search(e["title"]) or DESC_WORDS.search(desc[:300])):
             continue
         key = (e["title"].lower(), e["start"].isoformat())
         if key in seen:
@@ -249,8 +251,27 @@ def ics_sessions(all_text: str, mine_text: str, cfg: dict, tiers: dict, today=No
     return out
 
 
-def format_ics_sessions(sessions: list) -> str:
-    if not sessions:
+RELEVANT = re.compile(r"visa|\bopt\b|\bcpt\b|immigration|international|resume|interview|networking|workshop|hackathon|startup|founder|entrepreneur|\bai\b|career|job fair", re.I)
+
+
+def ics_other(all_text: str, cfg: dict, exclude: list, today=None, days: int = 45, limit: int = 5) -> list:
+    """Other upcoming events on the calendar that match your interests (visas, workshops, AI, startups...)."""
+    today = today or datetime.now(NY).date()
+    lo = datetime.combine(today, datetime.min.time()).replace(tzinfo=NY)
+    hi = lo + timedelta(days=days)
+    taken = {(s["company"].lower(), s["start_dt"].isoformat()) for s in exclude}
+    out = []
+    for e in parse_ics(all_text):
+        if not (lo <= e["end"] and e["start"] <= hi) or (e["title"].lower(), e["start"].isoformat()) in taken:
+            continue
+        if RELEVANT.search(e["title"]):
+            out.append({"title": e["title"], "start_dt": e["start"], "place": e.get("place", ""), "clashes": luma.clashes(e["start"], e["end"], cfg)})
+    out.sort(key=lambda s: s["start_dt"])
+    return out[:limit]
+
+
+def format_ics_sessions(sessions: list, others: list = ()) -> str:
+    if not sessions and not others:
         return "I found no company sessions in the Campus Groups calendar for the next few weeks."
     lines = [f"{len(sessions)} career and company event{'s' if len(sessions) != 1 else ''} on the Cornell Tech calendar, soonest first:"]
     for s in sessions[:14]:
@@ -263,18 +284,38 @@ def format_ics_sessions(sessions: list) -> str:
         lines.append("\nCareer Management's rule: attendance is mandatory once you RSVP, three strikes, and to cancel you must update your RSVP and email them at least 48 hours before.")
     if len(sessions) > 14:
         lines.append(f"\n(+{len(sessions) - 14} more later on)")
+    if not sessions:
+        lines = ["No company sessions are in the feeds I can read yet."]
+    if others:
+        lines.append("\nAlso on the calendar and relevant to you:")
+        for o in others:
+            lines.append(f"• {o['title']}\n  {o['start_dt'].strftime('%a %b %d, %-I:%M %p')}" + (f" · {o['place']}" if o["place"] else "") +
+                         (f"\n  ⚠️ clashes with {', '.join(o['clashes'])}" if o["clashes"] else ""))
     lines.append("\nFrom Campus Groups' own calendar feed. Check Campus Groups for changes. I never RSVP for you.")
     return "\n".join(lines)[:3900]
 
 
+def split_urls(value: str) -> list:
+    return [u for u in re.split(r"[,\s]+", value or "") if u.startswith(("https://", "http://", "webcal://"))]
+
+
 async def build_campus_ics(all_url: str, mine_url: str, get_text, cfg: dict, tiers: dict, today=None):
-    """get_text(url) -> (status, text). Returns the message to send."""
-    status, all_text = await get_text(all_url)
-    if status != 200 or "BEGIN:VCALENDAR" not in (all_text or ""):
-        return f"I couldn't read the Campus Groups calendar (HTTP {status}). The link may have changed, so copy it again from Subscribe to Calendars."
+    """get_text(url) -> (status, text). all_url may hold several feed links (comma separated). Returns the message to send."""
+    texts, failures = [], 0
+    for url in split_urls(all_url):
+        status, body = await get_text(url.replace("webcal://", "https://"))
+        if status == 200 and "BEGIN:VCALENDAR" in (body or ""):
+            texts.append(body)
+        else:
+            failures += 1
+    if not texts:
+        return "I couldn't read the Campus Groups calendar. The link may have changed, so copy it again from Subscribe to Calendars."
+    all_text = "\n".join(texts)
     mine_text = ""
     if mine_url:
         s2, mine_text = await get_text(mine_url)
         if s2 != 200 or "BEGIN:VCALENDAR" not in (mine_text or ""):
             mine_text = ""
-    return format_ics_sessions(ics_sessions(all_text, mine_text, cfg, tiers, today))
+    sessions = ics_sessions(all_text, mine_text, cfg, tiers, today)
+    text = format_ics_sessions(sessions, ics_other(all_text, cfg, sessions, today))
+    return text + (f"\n({failures} of your calendar links could not be read)" if failures else "")
