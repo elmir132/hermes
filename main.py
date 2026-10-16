@@ -1521,13 +1521,20 @@ async def cmd_digest(msg: Message):
     await msg.answer(await run_digest(mark=False, include_seen=show_all))
 
 # ── Job watcher (public Greenhouse / Lever / Ashby job feeds, no logins) ───────
-async def _jobs_get(url):
-    try:
-        async with httpx.AsyncClient(timeout=25, headers={"User-Agent": "hermes-job-watcher/1.0"}) as client:
-            r = await client.get(url)
-        return r.status_code, (r.json() if r.status_code == 200 else {})
-    except Exception:
-        return 0, {}
+async def _jobs_get(url, body=None):
+    """GET, or POST when a JSON body is given (Workday's job lists use POST)."""
+    for attempt in range(2):                               # one retry for a dropped connection or a server hiccup
+        try:
+            async with httpx.AsyncClient(timeout=25, headers={"User-Agent": "hermes-job-watcher/1.0"}) as client:
+                r = await (client.post(url, json=body) if body is not None else client.get(url))
+            if r.status_code >= 500 and attempt == 0:
+                await asyncio.sleep(2)
+                continue
+            return r.status_code, (r.json() if r.status_code == 200 else {})
+        except Exception:
+            if attempt == 0:
+                await asyncio.sleep(2)
+    return 0, {}
 
 LAST_JOBS: list = []          # what /jobs showed last, so "/fit 3" and "/applied 3" know which role you mean
 LAST_FIT: dict = {}           # job url -> resume name suggested by /fit
@@ -1553,7 +1560,7 @@ async def _jobs_loop():
 @dp.message(Command("jobs"))
 async def cmd_jobs(msg: Message):
     if not allowed(msg): return
-    await bot.send_chat_action(msg.chat.id, "typing")
+    await msg.answer("Checking the job boards, this takes about a minute...")
     show_all = "all" in msg.text.lower().split()
     await msg.answer(await run_jobs(mark=not show_all, include_seen=show_all))
 

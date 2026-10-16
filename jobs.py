@@ -8,6 +8,7 @@ Visa wording is only a hint (the posting may say nothing, or be out of date), so
 import json
 import re
 import sqlite3
+from urllib.parse import urlencode
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -26,6 +27,12 @@ NO_SPONSOR = re.compile(
     r"|without\s+(the\s+need\s+for\s+)?(visa\s+)?sponsorship", re.I)
 CITIZEN_ONLY = re.compile(r"u\.?s\.?\s+citizen(s|ship)?\s+(only|required)|must\s+be\s+a\s+u\.?s\.?\s+citizen|security\s+clearance|ts/sci|top\s+secret", re.I)
 SPONSORS = re.compile(r"(visa\s+sponsorship\s+(is\s+)?(available|offered|provided))|((we|will)\s+(provide\s+|offer\s+)?sponsor)|sponsor(s|ship)?\s+(for\s+)?(h-?1b|visas?)", re.I)
+
+
+AMAZON = "https://www.amazon.jobs/en/search.json"
+AMAZON_QUERIES = ["software development engineer", "machine learning engineer", "software engineer new grad"]
+WORKDAY_PAGE = 20
+WORKDAY_PAGES = 5            # at most 100 roles per company and run
 
 
 def load_config(path=CONFIG_PATH) -> dict:
@@ -85,6 +92,111 @@ def jobs_from_feed(provider: str, payload, company: str) -> list:
     return [j for j in jobs if j.get("listed", True) and j["title"] and j["url"]]
 
 
+# ---------- Amazon and Workday (the sites' own job data; not published as APIs, so they can change) ----------
+def _html_text(html: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html or "").replace("&nbsp;", " ")).strip()
+
+
+def _amazon_published(text: str) -> str:
+    try:
+        return datetime.strptime(text, "%B %d, %Y").replace(tzinfo=timezone.utc).isoformat()
+    except (ValueError, TypeError):
+        return ""
+
+
+def amazon_jobs(payload, company: str) -> list:
+    out = []
+    for raw in (payload or {}).get("jobs", []) if isinstance(payload, dict) else []:
+        if not isinstance(raw, dict) or not raw.get("job_path"):
+            continue
+        schedule = (raw.get("job_schedule_type") or "").replace("-", "")
+        out.append({"key": f"am:{raw.get('id_icims') or raw.get('id')}", "company": company, "title": (raw.get("title") or "").strip(),
+                    "location": raw.get("normalized_location") or raw.get("location", ""), "remote": False,
+                    "url": "https://www.amazon.jobs" + raw["job_path"], "published": _amazon_published(raw.get("posted_date")),
+                    "text": " ".join([_html_text(raw.get("description", "")), _html_text(raw.get("basic_qualifications", "")),
+                                      _html_text(raw.get("preferred_qualifications", ""))]),
+                    "employment": "intern" if raw.get("is_intern") else schedule, "pay": None})
+    return [j for j in out if j["title"]]
+
+
+def workday_age_days(text: str):
+    t = (text or "").lower()
+    if "today" in t:
+        return 0
+    if "yesterday" in t:
+        return 1
+    m = re.search(r"(\d+)\+?\s*days?", t)
+    return int(m.group(1)) if m else None
+
+
+def _facet_ids(node, parent=None, found=None):
+    """Collect (facet name, id) for every New York entry in Workday's filter list."""
+    found = {} if found is None else found
+    if isinstance(node, dict):
+        if str(node.get("descriptor", "")).lower().startswith(("us, ny, new york", "new york")) and "id" in node and parent:
+            found.setdefault(parent, []).append(node["id"])
+        for key, value in node.items():
+            _facet_ids(value, node.get("facetParameter", parent) if key == "values" else parent, found)
+    elif isinstance(node, list):
+        for item in node:
+            _facet_ids(item, parent, found)
+    return found
+
+
+def workday_jobs(company: dict, postings: list, now=None) -> list:
+    host, site = company["host"], company["site"]
+    now = now or datetime.now(timezone.utc)
+    out = []
+    for p in postings:
+        path = p.get("externalPath", "")
+        if not path or not p.get("title"):
+            continue
+        days = workday_age_days(p.get("postedOn", ""))
+        where = p.get("locationsText", "")
+        if re.fullmatch(r"\d+ locations?", where.strip(), re.I) or not where:
+            where = f"New York (one of {where.strip() or 'several locations'})"      # we asked Workday for New York roles only
+        out.append({"key": f"wd:{company['name']}:{path}", "company": company["name"], "title": p["title"].strip(), "location": where, "remote": False,
+                    "url": f"https://{host}/{site}{path}", "published": (now - timedelta(days=days)).isoformat() if days is not None else "",
+                    "text": "", "employment": "", "pay": None, "wd_path": path})
+    return out
+
+
+async def fetch_workday(company: dict, get_json, now=None):
+    """Two steps: find the New York filter ids, then page through the New York roles. Returns (jobs, error)."""
+    base = f"https://{company['host']}/wday/cxs/{company['tenant']}/{company['site']}"
+    status, first = await get_json(base + "/jobs", {"appliedFacets": {}, "limit": 1, "offset": 0, "searchText": ""})
+    if status != 200 or not isinstance(first, dict):
+        return [], f"HTTP {status}"
+    ids = _facet_ids(first.get("facets", []))
+    if not ids:
+        return [], "no New York filter found"
+    postings = []
+    for page in range(WORKDAY_PAGES):
+        status, data = await get_json(base + "/jobs", {"appliedFacets": ids, "limit": WORKDAY_PAGE, "offset": page * WORKDAY_PAGE,
+                                                       "searchText": company.get("search", "")})
+        if status != 200 or not isinstance(data, dict):
+            break
+        batch = data.get("jobPostings", [])
+        postings += batch
+        if len(batch) < WORKDAY_PAGE or (page + 1) * WORKDAY_PAGE >= data.get("total", 0):
+            break
+    return workday_jobs(company, postings, now), None
+
+
+async def fetch_amazon(company: dict, get_json):
+    jobs_, seen = [], set()
+    for q in company.get("queries", AMAZON_QUERIES):
+        params = urlencode({"base_query": q, "normalized_location[]": "New York, New York, USA", "result_limit": 50, "sort": "recent"})
+        status, payload = await get_json(f"{AMAZON}?{params}")
+        if status != 200:
+            return jobs_, f"HTTP {status}"
+        for j in amazon_jobs(payload, company["name"]):
+            if j["key"] not in seen:
+                seen.add(j["key"])
+                jobs_.append(j)
+    return jobs_, None
+
+
 # ---------- matching ----------
 def has(text: str, words) -> bool:
     """True when any word or phrase appears as a whole word ('intern' does not match 'internal')."""
@@ -105,6 +217,10 @@ def location_ok(location: str, remote: bool, cfg: dict) -> bool:
 def title_matches(title: str, cfg: dict):
     """Returns (ok, score, reasons)."""
     t = re.sub(r"\s+", " ", re.sub(r"[^a-z0-9+ ]", " ", title.lower()))
+    head = re.split(r"[,(\-–:|]", title)[0].lower().strip()
+    if re.search(r"(?:^|\s)(iii|iv|v|vi|[4-9])$", head):          # "Engineer 4", "Developer IV": a senior level number
+        return False, 0, []
+    t = re.sub(r"member of technical staff", " mts ", t)       # an ordinary engineering title, not the senior "staff" level
     if has(t, cfg.get("exclude_title", [])):
         return False, 0, []
     junior = has(t, cfg.get("junior_words", []))
@@ -231,13 +347,21 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     """get_json(url) -> (status_code, parsed_json). Returns (text_to_send, found_count, errors)."""
     candidates, errors = [], []
     for company in cfg.get("companies", []):
-        provider, slug, name = company["provider"], company["slug"], company.get("name", company["slug"])
-        url = {"greenhouse": GREENHOUSE, "lever": LEVER, "ashby": ASHBY}[provider].format(slug=slug)
-        status, payload = await get_json(url)
-        if status != 200:
-            errors.append(f"{name}: HTTP {status}")
-            continue
-        for job in jobs_from_feed(provider, payload, name):
+        provider, name = company["provider"], company.get("name", company.get("slug"))
+        slug = company.get("slug", company.get("tenant", ""))
+        if provider == "amazon":
+            found, err = await fetch_amazon(dict(company, name=name), get_json)
+        elif provider == "workday":
+            found, err = await fetch_workday(dict(company, name=name), get_json, now)
+        else:
+            url = {"greenhouse": GREENHOUSE, "lever": LEVER, "ashby": ASHBY}[provider].format(slug=slug)
+            status, payload = await get_json(url)
+            found, err = (jobs_from_feed(provider, payload, name), None) if status == 200 else ([], f"HTTP {status}")
+        if err:
+            errors.append(f"{name}: {err}")
+            if not found:
+                continue
+        for job in found:
             job["tier"] = company.get("tier", 0)
             scored = score_job(job, cfg, now)
             if scored:
@@ -267,6 +391,16 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                     if r.get("currency_type") == "USD" and r.get("min_cents") and r.get("max_cents"):
                         job["pay"] = (int(r["min_cents"]) // 100, int(r["max_cents"]) // 100)
                         break
+        if provider == "workday" and not job["text"]:
+            if fetched >= DETAIL_LIMIT * 2:
+                continue
+            fetched += 1
+            status, detail = await get_json(f"https://{slug_host(cfg, job['company'])}/wday/cxs/{slug_path(cfg, job['company'])}{job['wd_path']}")
+            info = (detail or {}).get("jobPostingInfo", {}) if status == 200 and isinstance(detail, dict) else {}
+            job["text"] = _html_text(info.get("jobDescription", ""))
+            if "part" in (info.get("timeType") or "").lower() or "intern" in (info.get("timeType") or "").lower():
+                skipped_keys.append(job["key"])
+                continue
         job["pay"] = job.get("pay") or pay_from_text(job["text"])
         if not pay_ok(job["pay"], cfg):
             skipped_keys.append(job["key"])                      # known pay below your minimum
@@ -298,6 +432,19 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     if mark:
         mark_seen(db_path, [j["key"] for _, _, j in shown])
     return text, len(shown), errors
+
+
+def _company(cfg, name):
+    return next((c for c in cfg.get("companies", []) if c.get("name") == name), {})
+
+
+def slug_host(cfg, name):
+    return _company(cfg, name).get("host", "")
+
+
+def slug_path(cfg, name):
+    c = _company(cfg, name)
+    return f"{c.get('tenant', '')}/{c.get('site', '')}"
 
 
 def _errs(errors):

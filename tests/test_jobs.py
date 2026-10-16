@@ -62,8 +62,14 @@ class TitleTests(unittest.TestCase):
             self.assertTrue(self.ok(t), t)
 
     def test_senior_and_unrelated_roles_are_skipped(self):
-        for t in ["Senior Machine Learning Engineer", "Staff Software Engineer", "Engineering Manager", "Account Executive", "Marketing Lead", "PhD Data Scientist, Intern", "Applied AI Architect"]:
+        for t in ["Senior Machine Learning Engineer", "Staff Software Engineer", "Engineering Manager", "Staff Software Engineer", "Account Executive", "Marketing Lead", "PhD Data Scientist, Intern", "Applied AI Architect"]:
             self.assertFalse(self.ok(t), t)
+
+    def test_senior_level_numbers_and_vice_presidents_are_skipped(self):
+        for t in ["Applied Researcher 4 (AI Foundations)", "Full Stack Engineer 5", "Software Engineer IV", "Software Engineer III, Ads", "Vice President, AI Center of Excellence"]:
+            self.assertFalse(jobs.title_matches(t, CFG)[0], t)
+        for t in ["Software Development Engineer II", "Software Engineer 2", "Software Engineer II, Growth", "2027 University Graduate - Software Engineer"]:
+            self.assertTrue(jobs.title_matches(t, CFG)[0], t)
 
     def test_exclusions_always_win_even_with_an_entry_level_word(self):
         self.assertFalse(self.ok("PhD Machine Learning Intern"))
@@ -88,7 +94,7 @@ class SweFocusTests(unittest.TestCase):
         self.assertEqual(swe, ml)
 
     def test_swe_titles_match(self):
-        for t in ["Software Engineer", "Backend Engineer", "Full Stack Engineer", "Platform Engineer", "Infrastructure Engineer", "Software Engineer, New Grad", "Site Reliability Engineer"]:
+        for t in ["Software Development Engineer", "Software Dev Engineer, AWS", "SDE II", "Member of Technical Staff", "Member of Technical Staff, Inference", "Software Engineer", "Backend Engineer", "Full Stack Engineer", "Platform Engineer", "Infrastructure Engineer", "Software Engineer, New Grad", "Site Reliability Engineer"]:
             self.assertTrue(jobs.title_matches(t, CFG)[0], t)
 
     def test_unrelated_engineers_do_not(self):
@@ -234,7 +240,7 @@ class ScanTests(unittest.TestCase):
         self.assertEqual(self.scan(feeds, co, include_seen=True)[1], 1)
 
     def test_the_number_shown_is_capped_and_the_rest_come_next_time(self):
-        feeds = FakeFeeds({"ashbyhq": {"jobs": [ab_job(i, f"ML Engineer {i}") for i in range(20)]}})
+        feeds = FakeFeeds({"ashbyhq": {"jobs": [ab_job(i, f"ML Engineer Team{i}") for i in range(20)]}})
         co = [{"name": "Acme", "provider": "ashby", "slug": "acme"}]
         cfg = cfg_with(co, max_per_company=None)
         first = run(jobs.scan(cfg, feeds, self.db, now=NOW, limit=12))
@@ -268,7 +274,7 @@ class ScanTests(unittest.TestCase):
         self.assertEqual(again[1], 2)                                       # the 6-year role never comes back
 
     def test_one_company_cannot_fill_the_whole_list(self):
-        feeds = FakeFeeds({"job-board/big": {"jobs": [ab_job(i, f"ML Engineer {i}") for i in range(10)]},
+        feeds = FakeFeeds({"job-board/big": {"jobs": [ab_job(i, f"ML Engineer Team{i}") for i in range(10)]},
                            "job-board/small": {"jobs": [ab_job(100, "Backend Engineer")]}})
         cos = [{"name": "Big", "provider": "ashby", "slug": "big"}, {"name": "Small", "provider": "ashby", "slug": "small"}]
         text, n, _ = run(jobs.scan(cfg_with(cos, max_per_company=3), feeds, self.db, now=NOW))
@@ -315,13 +321,17 @@ class ScanTests(unittest.TestCase):
 
 
 class ConfigTests(unittest.TestCase):
-    def test_every_company_uses_a_known_provider_and_has_a_slug(self):
+    def test_every_company_uses_a_known_provider_and_has_what_it_needs(self):
         names = set()
         for c in CFG["companies"]:
-            self.assertIn(c["provider"], ("greenhouse", "lever", "ashby"))
-            self.assertTrue(c["slug"] and c["name"])
-            self.assertNotIn(c["slug"], names)
-            names.add(c["slug"])
+            self.assertIn(c["provider"], ("greenhouse", "lever", "ashby", "workday", "amazon"))
+            self.assertTrue(c["name"])
+            self.assertNotIn(c["name"], names)
+            names.add(c["name"])
+            if c["provider"] == "workday":
+                self.assertTrue(c["host"].endswith(".myworkdayjobs.com") and c["tenant"] and c["site"])
+            elif c["provider"] != "amazon":
+                self.assertTrue(c["slug"])
 
 
 if __name__ == "__main__":

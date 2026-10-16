@@ -335,6 +335,92 @@
    "provider": "ashby",
    "slug": "baseten",
    "tier": 4
+  },
+  {
+   "name": "NVIDIA",
+   "provider": "workday",
+   "host": "nvidia.wd5.myworkdayjobs.com",
+   "tenant": "nvidia",
+   "site": "NVIDIAExternalCareerSite",
+   "tier": 2,
+   "search": "engineer"
+  },
+  {
+   "name": "Salesforce",
+   "provider": "workday",
+   "host": "salesforce.wd12.myworkdayjobs.com",
+   "tenant": "salesforce",
+   "site": "External_Career_Site",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
+   "name": "Adobe",
+   "provider": "workday",
+   "host": "adobe.wd5.myworkdayjobs.com",
+   "tenant": "adobe",
+   "site": "external_experienced",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
+   "name": "Capital One",
+   "provider": "workday",
+   "host": "capitalone.wd12.myworkdayjobs.com",
+   "tenant": "capitalone",
+   "site": "Capital_One",
+   "tier": 3,
+   "search": "software engineer"
+  },
+  {
+   "name": "Mastercard",
+   "provider": "workday",
+   "host": "mastercard.wd1.myworkdayjobs.com",
+   "tenant": "mastercard",
+   "site": "CorporateCareers",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
+   "name": "PayPal",
+   "provider": "workday",
+   "host": "paypal.wd1.myworkdayjobs.com",
+   "tenant": "paypal",
+   "site": "jobs",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
+   "name": "Workday",
+   "provider": "workday",
+   "host": "workday.wd5.myworkdayjobs.com",
+   "tenant": "workday",
+   "site": "Workday",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
+   "name": "Cisco",
+   "provider": "workday",
+   "host": "cisco.wd5.myworkdayjobs.com",
+   "tenant": "cisco",
+   "site": "Cisco_Careers",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
+   "name": "Snap",
+   "provider": "workday",
+   "host": "snapchat.wd1.myworkdayjobs.com",
+   "tenant": "snapchat",
+   "site": "snap",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
+   "name": "Amazon",
+   "provider": "amazon",
+   "tier": 2
   }
  ],
  "strong_title": [
@@ -368,7 +454,12 @@
   "devops",
   "product engineer",
   "application engineer",
-  "api"
+  "api",
+  "software development engineer",
+  "software dev engineer",
+  "software development",
+  "sde",
+  "mts"
  ],
  "include_title": [
   "data engineer",
@@ -455,7 +546,12 @@
   "macos",
   "helpdesk",
   "corporate",
-  "workplace"
+  "workplace",
+  "vice president",
+  "avp",
+  "svp",
+  "evp",
+  "distinguished"
  ],
  "junior_words": [
   "junior",
