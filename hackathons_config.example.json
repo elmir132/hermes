@@ -75,5 +75,14 @@
   "brooklyn",
   "manhattan",
   "nyc"
+ ],
+ "registered": [
+  {
+   "name": "Sample Hackathon",
+   "start": "2026-11-01T09:00",
+   "end": "2026-11-01T18:00",
+   "place": "Somewhere in New York",
+   "status": "going"
+  }
  ]
 }

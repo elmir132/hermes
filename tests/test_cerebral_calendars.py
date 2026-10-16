@@ -128,7 +128,7 @@ class CalendarTests(unittest.TestCase):
             return ev
         luma.entry_to_event = tagged
         try:
-            cfg = {"calendars": [{"name": "Test", "calendar_api_id": "cal-x"}], "sponsors": []}
+            cfg = {"calendars": [{"name": "Test", "calendar_api_id": "cal-x"}], "sponsors": [], "browser_file": "/nonexistent/browser_jobs.json"}
             ranked, notes = run(luma.find_hackathons(cfg, net.json, net.html, NOW))
         finally:
             luma.entry_to_event = orig

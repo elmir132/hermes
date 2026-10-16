@@ -1691,9 +1691,12 @@ async def _followup_loop():
 async def cmd_hackathons(msg: Message):
     if not allowed(msg): return
     words = msg.text.split()[1:]
+    cfg = await asyncio.to_thread(luma.load_config)
+    if words and words[0].lower() == "mine":
+        await msg.answer(luma.my_hackathons(cfg))
+        return
     limit = int(words[0]) if words and words[0].isdigit() and 1 <= int(words[0]) <= 10 else 5
     await msg.answer("Looking through Luma's New York list, about 20 seconds...")
-    cfg = await asyncio.to_thread(luma.load_config)
     ranked, notes = await luma.find_hackathons(cfg, _jobs_get, _jobs_get_html, limit=limit)
     await msg.answer(luma.format_hackathons(ranked, notes))
 

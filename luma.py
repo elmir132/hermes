@@ -185,7 +185,27 @@ def local(iso: str):
         return None
 
 
-def clashes(start, end, cfg: dict) -> list:
+def signed_up_blocks(cfg: dict, skip: str = "") -> list:
+    """Events you are going to (from the config's "registered" list) as busy blocks; `skip` leaves one out."""
+    return [{"name": r["name"] + " (signed up)", "from": r["start"], "to": r["end"]} for r in cfg.get("registered", [])
+            if r.get("status", "going") == "going" and r["name"] != skip]
+
+
+def _words(name: str) -> set:
+    return {w for w in re.findall(r"[a-z0-9]+", name.lower()) if len(w) > 2 and w not in {"nyc", "the", "and", "new", "york"}}
+
+
+def is_registered(ev: dict, cfg: dict) -> bool:
+    for r in cfg.get("registered", []):
+        if r.get("slug") and r["slug"] == ev.get("slug"):
+            return True
+        a, b = _words(r["name"]), _words(ev.get("name", ""))
+        if a and b and len(a & b) / min(len(a), len(b)) >= 0.7:
+            return True
+    return False
+
+
+def clashes(start, end, cfg: dict, skip: str = "") -> list:
     """Names of your fixed commitments that overlap [start, end] (local times)."""
     found = []
     for block in cfg.get("busy_weekly", []):
@@ -194,7 +214,7 @@ def clashes(start, end, cfg: dict) -> list:
             b1 = start.replace(hour=int(block["to"][:2]), minute=int(block["to"][3:]), second=0, microsecond=0)
             if start < b1 and end > b0:
                 found.append(block["name"])
-    for block in cfg.get("busy_dates", []):
+    for block in list(cfg.get("busy_dates", [])) + signed_up_blocks(cfg, skip):
         b0 = datetime.fromisoformat(block["from"]).replace(tzinfo=NY)
         b1 = datetime.fromisoformat(block["to"]).replace(tzinfo=NY)
         if start < b1 and end > b0:
@@ -289,6 +309,10 @@ async def find_hackathons(cfg: dict, get_json, get_html, now=None, limit=5):
         scored = score_event(ev, detail, cfg, now)
         if scored:
             ranked.append({**ev, "detail": detail, "score": scored[0], "reasons": scored[1], "warnings": scored[2]})
+    hidden = [r for r in ranked if is_registered(r, cfg)]
+    ranked = [r for r in ranked if not is_registered(r, cfg)]
+    if hidden:
+        notes.append(f"{len(hidden)} you already signed up for hidden; /hackathons mine lists them")
     ranked.sort(key=lambda r: (-r["score"], r["start"]))
     return ranked[:limit], notes
 
@@ -312,3 +336,32 @@ def format_hackathons(ranked: list, notes: list) -> str:
                      (f"\n   watch out: {'; '.join(r['warnings'])}" if r["warnings"] else "") + f"\n   {r.get('link') or 'https://luma.com/' + r['slug']}")
     lines.append("\nThe score is a rough guide from the event page. Read it before you join. I never register you for anything.")
     return ("\n".join(lines))[:OUTPUT_CHARS] + (("\n(" + "; ".join(notes) + ")") if notes else "")
+
+
+def my_hackathons(cfg: dict, now=None) -> str:
+    """Your signed-up and invited events, soonest first, with clashes against classes, fixed dates and each other."""
+    now = (now or datetime.now(timezone.utc)).astimezone(NY)
+    rows = []
+    for r in cfg.get("registered", []):
+        start = datetime.fromisoformat(r["start"]).replace(tzinfo=NY)
+        end = datetime.fromisoformat(r["end"]).replace(tzinfo=NY)
+        if end < now:
+            continue
+        others = [x for x in clashes(start, end, cfg, skip=r["name"])]
+        invited = [x for x in cfg.get("registered", []) if x.get("status") == "invited" and x["name"] != r["name"]]
+        for x in invited:                                          # an event you are only invited to can still be a conflict to resolve
+            xs, xe = datetime.fromisoformat(x["start"]).replace(tzinfo=NY), datetime.fromisoformat(x["end"]).replace(tzinfo=NY)
+            if start < xe and end > xs:
+                others.append(x["name"] + " (invited, not registered)")
+        rows.append((start, end, r, list(dict.fromkeys(others))))
+    if not rows:
+        return "I don't have any upcoming hackathons of yours listed."
+    rows.sort(key=lambda x: x[0])
+    lines = [f"Your upcoming hackathons ({len(rows)}):"]
+    for start, end, r, others in rows:
+        span = start.strftime("%a %b %d, %-I:%M %p") + (" to " + end.strftime("%-I:%M %p") if end.date() == start.date() else " to " + end.strftime("%a %b %d, %-I:%M %p"))
+        status = "" if r.get("status", "going") == "going" else f" ({r['status']}, not registered)"
+        lines.append(f"\n• {r['name']}{status}\n  {span}" + (f" · {r['place']}" if r.get("place") else "") +
+                     (f"\n  ⚠️ clashes with {', '.join(others)}" if others else ""))
+    lines.append("\nFrom your Luma confirmation emails. If two clash, you can only do one, so decide early and cancel the other so a waitlisted person gets the spot.")
+    return "\n".join(lines)[:OUTPUT_CHARS]

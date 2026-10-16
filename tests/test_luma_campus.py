@@ -11,7 +11,7 @@ import campus  # noqa: E402
 import luma  # noqa: E402
 
 NOW = datetime(2026, 10, 15, 12, tzinfo=timezone.utc)
-CFG = {"sponsors": ["OpenAI", "Anthropic", "Daytona"],
+CFG = {"browser_file": "/nonexistent/browser_jobs.json", "sponsors": ["OpenAI", "Anthropic", "Daytona"],
        "busy_weekly": [{"name": "sample class", "days": [1, 3], "from": "10:00", "to": "11:15"}],
        "busy_dates": [{"name": "football game", "from": "2026-10-22T16:00", "to": "2026-10-22T18:00"}]}
 
@@ -101,7 +101,7 @@ class LumaTests(unittest.TestCase):
                    entry(3, "Pizza and Friends", "2026-10-26T22:00:00.000Z", "2026-10-26T23:00:00.000Z"),
                    entry(4, "Agent Build Day", "2026-11-02T14:00:00.000Z", "2026-11-02T22:00:00.000Z", slug="build4")]
         net = FakeLuma(entries, {"hack1": page(), "build4": page("Build agents.", free=False)})
-        ranked, notes = run(luma.find_hackathons({"feed_pages": 3, "sponsors": []}, net.json, net.html, NOW))
+        ranked, notes = run(luma.find_hackathons({"feed_pages": 3, "sponsors": [], "browser_file": "/nonexistent/browser_jobs.json"}, net.json, net.html, NOW))
         self.assertEqual([r["slug"] for r in ranked], ["hack1", "build4"])                    # best first
         opened = [c for c in net.calls if "get-paginated" not in c]
         self.assertEqual(sorted(opened), ["https://luma.com/build4", "https://luma.com/hack1"])  # no page opened for jazz or pizza
@@ -109,7 +109,7 @@ class LumaTests(unittest.TestCase):
 
     def test_an_event_page_that_fails_is_still_listed_without_a_price(self):
         net = FakeLuma([entry(1, "NYC Hackathon", "2026-10-30T14:00:00.000Z", "2026-10-31T00:00:00.000Z", slug="h")], {"h": None})
-        ranked, _ = run(luma.find_hackathons({"sponsors": []}, net.json, net.html, NOW))
+        ranked, _ = run(luma.find_hackathons({"sponsors": [], "browser_file": "/nonexistent/browser_jobs.json"}, net.json, net.html, NOW))
         self.assertEqual(len(ranked), 1)
         self.assertIn("price not read", luma.format_hackathons(ranked, []))
 
@@ -123,7 +123,7 @@ class LumaTests(unittest.TestCase):
 
     def test_nothing_found_gives_a_plain_message(self):
         net = FakeLuma([])
-        ranked, notes = run(luma.find_hackathons({}, net.json, net.html, NOW))
+        ranked, notes = run(luma.find_hackathons({"browser_file": "/nonexistent/browser_jobs.json"}, net.json, net.html, NOW))
         self.assertIn("no upcoming hackathons", luma.format_hackathons(ranked, notes))
 
     def test_event_description_text_cannot_change_what_is_fetched(self):
