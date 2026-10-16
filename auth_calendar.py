@@ -5,7 +5,6 @@ from pathlib import Path
 SCOPES = [
     "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/gmail.send",
 ]
 
 account = input("Account name (e.g. personal / bloody14 / elmirabdullaiev): ").strip()
@@ -27,4 +26,4 @@ print("Opening browser — sign in with the correct Google account...")
 creds = flow.run_local_server(port=0, open_browser=True)
 token_path.write_text(creds.to_json())
 print(f"✅ Saved {token_path}")
-print(f"Upload with: scp {token_path} <server>:/home/hermes/app/")
+print(f"Upload with: scp {token_path} root@167.71.58.243:/home/hermes/app/hermes/")

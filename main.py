@@ -413,7 +413,6 @@ def _fmt_email_list(msgs: list[tuple[str, str, str, str]], title: str) -> str:
 _GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/gmail.send",
 ]
 _HERE      = Path(__file__).parent
 _GCAL_API  = "https://www.googleapis.com/calendar/v3"
