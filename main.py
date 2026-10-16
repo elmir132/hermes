@@ -1520,7 +1520,7 @@ async def cmd_digest(msg: Message):
     show_all = "all" in msg.text.lower().split()
     await msg.answer(await run_digest(mark=False, include_seen=show_all))
 
-# ── Job watcher (public Greenhouse / Lever / Ashby job feeds, no logins) ───────
+# ── Job watcher (public feeds plus Google / Apple search pages, no logins) ─────
 async def _jobs_get(url, body=None):
     """GET, or POST when a JSON body is given (Workday's job lists use POST)."""
     for attempt in range(2):                               # one retry for a dropped connection or a server hiccup
@@ -1536,13 +1536,31 @@ async def _jobs_get(url, body=None):
                 await asyncio.sleep(2)
     return 0, {}
 
+
+async def _jobs_get_html(url):
+    """Fetch only HTML search pages; JSON job feeds keep using _jobs_get unchanged."""
+    for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(timeout=25, follow_redirects=True,
+                                         headers={"User-Agent": "hermes-job-watcher/1.0"}) as client:
+                r = await client.get(url)
+            if r.status_code >= 500 and attempt == 0:
+                await asyncio.sleep(2)
+                continue
+            return r.status_code, (r.text if r.status_code == 200 else "")
+        except Exception:
+            if attempt == 0:
+                await asyncio.sleep(2)
+    return 0, ""
+
 LAST_JOBS: list = []          # what /jobs showed last, so "/fit 3" and "/applied 3" know which role you mean
 LAST_FIT: dict = {}           # job url -> resume name suggested by /fit
 
 async def run_jobs(mark: bool = True, include_seen: bool = False) -> str:
     cfg = await asyncio.to_thread(jobs.load_config)
     shown: list = []
-    text, _, _ = await jobs.scan(cfg, _jobs_get, DB_PATH, mark=mark, include_seen=include_seen, collect=shown)
+    text, _, _ = await jobs.scan(cfg, _jobs_get, DB_PATH, mark=mark, include_seen=include_seen,
+                                 collect=shown, get_html=_jobs_get_html)
     if shown:
         LAST_JOBS[:] = shown
     return text

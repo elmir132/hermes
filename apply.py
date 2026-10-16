@@ -181,4 +181,7 @@ async def fit_check(profile, job, summarize):
     answer = (await summarize(build_fit_prompt(profile, job))).strip()
     if answer.startswith("⚠️") or not answer:
         return None, "Couldn't check the fit right now, try again in a minute.", None
-    return parse_fit(answer, profile)
+    score, text, resume = parse_fit(answer, profile)
+    if len((job.get("text") or "").strip()) < 200:                 # some listings come without a description
+        text += "\nNote: I only had the title and location for this role, so treat this as a rough guess and read the posting."
+    return score, text, resume

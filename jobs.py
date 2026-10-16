@@ -1,14 +1,16 @@
-"""Daily job watcher for a list of companies, using their public job-board feeds.
+"""Daily job watcher for public job-board feeds and first-page Google/Apple search results.
 
-Greenhouse, Lever and Ashby publish each company's open roles as public JSON for exactly this kind of use.
-No login, no scraping behind a login, no account, and no model call: titles and locations are matched with
-plain rules, so nothing written in a posting can steer the bot. It never applies to anything.
-Visa wording is only a hint (the posting may say nothing, or be out of date), so always read the posting.
+Greenhouse, Lever and Ashby expose public job feeds. Google and Apple are read from their public search pages
+using a separate HTML-only fetch. No login or model call is used by the watcher; plain rules match titles and
+locations, so posting text cannot steer it. It never applies to anything. Search-page roles are only listings:
+their descriptions, pay, visa terms and experience requirements are not checked.
 """
+import html as html_lib
 import json
 import re
 import sqlite3
-from urllib.parse import urlencode
+from html.parser import HTMLParser
+from urllib.parse import unquote, urlencode, urljoin, urlsplit, urlunsplit
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -31,6 +33,11 @@ SPONSORS = re.compile(r"(visa\s+sponsorship\s+(is\s+)?(available|offered|provide
 
 AMAZON = "https://www.amazon.jobs/en/search.json"
 AMAZON_QUERIES = ["software development engineer", "machine learning engineer", "software engineer new grad"]
+GOOGLE_SEARCH = "https://www.google.com/about/careers/applications/jobs/results"
+GOOGLE_QUERIES = ["software engineer", "machine learning engineer", "new grad software engineer"]
+APPLE_SEARCH = "https://jobs.apple.com/en-us/search"
+APPLE_QUERIES = ["software engineer", "machine learning engineer", "new grad software engineer"]
+SEARCH_PAGE_LIMIT = 20
 WORKDAY_PAGE = 20
 WORKDAY_PAGES = 5            # at most 100 roles per company and run
 
@@ -93,6 +100,12 @@ def jobs_from_feed(provider: str, payload, company: str) -> list:
 
 
 # ---------- Amazon and Workday (the sites' own job data; not published as APIs, so they can change) ----------
+def page_text(page: str) -> str:
+    """Visible text of a posting page (scripts, styles and icons removed), capped."""
+    page = re.sub(r"(?is)<(script|style|noscript|svg).*?>.*?</\1>", " ", page or "")
+    return re.sub(r"\s+", " ", html_lib.unescape(re.sub(r"<[^>]+>", " ", page))).strip()[:20000]
+
+
 def _html_text(html: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html or "").replace("&nbsp;", " ")).strip()
 
@@ -195,6 +208,159 @@ async def fetch_amazon(company: dict, get_json):
                 seen.add(j["key"])
                 jobs_.append(j)
     return jobs_, None
+
+
+class _SearchLinkParser(HTMLParser):
+    """Collect text and labels from anchors that point to actual job detail pages."""
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.current = None
+        self.links = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "a" and self.current is None:
+            href = attrs.get("href", "")
+            path = urlsplit(href).path.lower()
+            if re.search(r"(?:^|/)jobs/results/", path) or re.search(r"/en-us/details/[^/]+", path):
+                self.current = {"href": href, "text": [], "heading": [], "in_heading": False,
+                                "label": attrs.get("aria-label", ""), "title": attrs.get("title", "")}
+        elif self.current is not None and tag in ("h1", "h2", "h3"):
+            self.current["in_heading"] = True
+
+    def handle_data(self, data):
+        if self.current is not None:
+            self.current["text"].append(data)
+            if self.current["in_heading"]:
+                self.current["heading"].append(data)
+
+    def handle_endtag(self, tag):
+        if self.current is None:
+            return
+        if tag in ("h1", "h2", "h3"):
+            self.current["in_heading"] = False
+        if tag == "a":
+            self.links.append(self.current)
+            self.current = None
+
+
+def _canonical_job_url(url: str) -> str:
+    parts = urlsplit(url)
+    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path, "", ""))
+
+
+def _google_title(url: str, label: str) -> str:
+    accessible_title = re.sub(r"(?i)^learn more about\s+", "", (label or "").strip()).strip(" .")
+    if accessible_title:
+        return accessible_title
+    path = urlsplit(url).path
+    match = re.search(r"/jobs/results/([^/]+)", path)
+    if match:
+        slug = unquote(match.group(1))
+        slug = re.sub(r"^\d+-?", "", slug)
+        if slug:
+            return re.sub(r"\s+", " ", re.sub(r"[-_]+", " ", slug)).strip().title()
+    return ""
+
+
+def _real_apple_title(link: dict) -> str:
+    generic = re.compile(r"^(see full role description|where we(?:'|’)re hiring|learn more|apply now|view details|read more)\b", re.I)
+    choices = [" ".join(link["heading"]), " ".join(link["text"]), link["label"], link["title"]]
+    for raw in choices:
+        title = re.sub(r"\s+", " ", raw).strip()
+        if title and not generic.search(title):
+            return title
+    return ""
+
+
+def parse_google_html(page: str, company: str = "Google") -> list:
+    """Parse first-page Google results; normalize relative links and deduplicate tracking URLs."""
+    parser = _SearchLinkParser()
+    parser.feed(page if isinstance(page, str) else "")
+    out, seen = [], set()
+    base = "https://www.google.com/about/careers/applications/"
+    for link in parser.links:
+        url = _canonical_job_url(urljoin(base, link["href"]))
+        parts = urlsplit(url)
+        if parts.hostname != "www.google.com" or "/jobs/results/" not in parts.path:
+            continue
+        if url in seen:
+            continue
+        seen.add(url)
+        title = _google_title(url, link["label"])
+        if not title:
+            continue
+        out.append({"key": f"google:{company}:{url}", "company": company, "title": title,
+                    "location": "New York, NY", "location_verified": False,
+                    "remote": False, "url": url, "published": "",
+                    "text": "", "employment": "", "pay": None, "details_checked": False})
+        if len(out) >= SEARCH_PAGE_LIMIT:
+            break
+    return out
+
+
+def parse_apple_html(page: str, company: str = "Apple", cfg: dict = None) -> list:
+    """Keep titled full-time Apple roles and discard generic links and title-level seasonal work."""
+    parser = _SearchLinkParser()
+    parser.feed(page if isinstance(page, str) else "")
+    out, seen = [], set()
+    base = "https://jobs.apple.com"
+    for link in parser.links:
+        url = _canonical_job_url(urljoin(base, link["href"]))
+        parts = urlsplit(url)
+        if parts.hostname != "jobs.apple.com" or not re.search(r"/en-us/details/[^/]+", parts.path):
+            continue
+        if url in seen:
+            continue
+        title = _real_apple_title(link)
+        if not title or not title_matches(title, cfg or load_config())[0]:
+            continue
+        seen.add(url)
+        out.append({"key": f"apple:{company}:{url}", "company": company, "title": title,
+                    "location": "New York City, NY", "location_verified": False,
+                    "remote": False, "url": url, "published": "",
+                    "text": "", "employment": "", "pay": None, "details_checked": False})
+        if len(out) >= SEARCH_PAGE_LIMIT:
+            break
+    return out
+
+
+async def fetch_google(company: dict, get_html):
+    """Read the first server-rendered results page for each query; never request page 2."""
+    found, errors, seen = [], [], set()
+    for query in company.get("queries", GOOGLE_QUERIES):
+        params = urlencode({"q": query, "location": "New York, NY, USA"})
+        status, page = await get_html(f"{GOOGLE_SEARCH}?{params}")
+        if status != 200:
+            errors.append(f"HTTP {status}")
+            continue
+        page_jobs = parse_google_html(page, company.get("name", "Google"))
+        if not page_jobs:
+            errors.append("no job links found on first results page")
+        for job in page_jobs:
+            if job["url"] not in seen:
+                seen.add(job["url"])
+                found.append(job)
+    return found, ("; ".join(errors) if errors else None)
+
+
+async def fetch_apple(company: dict, get_html, cfg: dict):
+    """Read New York Apple search pages and retain relevant titled roles only."""
+    found, errors, seen = [], [], set()
+    for query in company.get("queries", APPLE_QUERIES):
+        params = urlencode({"location": "new-york-city-NYC", "search": query})
+        status, page = await get_html(f"{APPLE_SEARCH}?{params}")
+        if status != 200:
+            errors.append(f"HTTP {status}")
+            continue
+        page_jobs = parse_apple_html(page, company.get("name", "Apple"), cfg)
+        if not page_jobs:
+            errors.append("no matching titled roles found on results page")
+        for job in page_jobs:
+            if job["url"] not in seen:
+                seen.add(job["url"])
+                found.append(job)
+    return found, ("; ".join(errors) if errors else None)
 
 
 # ---------- matching ----------
@@ -343,8 +509,8 @@ def mark_seen(path, keys, now=None):
 
 
 # ---------- the scan ----------
-async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None):
-    """get_json(url) -> (status_code, parsed_json). Returns (text_to_send, found_count, errors)."""
+async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None, get_html=None):
+    """get_json(url) -> (status, JSON); get_html(url) -> (status, text). Returns text, count and errors."""
     candidates, errors = [], []
     for company in cfg.get("companies", []):
         provider, name = company["provider"], company.get("name", company.get("slug"))
@@ -353,6 +519,13 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             found, err = await fetch_amazon(dict(company, name=name), get_json)
         elif provider == "workday":
             found, err = await fetch_workday(dict(company, name=name), get_json, now)
+        elif provider in ("google", "apple"):
+            if get_html is None:
+                found, err = [], "HTML reader is not configured"
+            elif provider == "google":
+                found, err = await fetch_google(dict(company, name=name), get_html)
+            else:
+                found, err = await fetch_apple(dict(company, name=name), get_html, cfg)
         else:
             url = {"greenhouse": GREENHOUSE, "lever": LEVER, "ashby": ASHBY}[provider].format(slug=slug)
             status, payload = await get_json(url)
@@ -401,6 +574,14 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             if "part" in (info.get("timeType") or "").lower() or "intern" in (info.get("timeType") or "").lower():
                 skipped_keys.append(job["key"])
                 continue
+        if provider == "google" and job.get("details_checked") is False and get_html is not None and fetched < DETAIL_LIMIT * 2:
+            fetched += 1                                          # Google's posting pages carry the qualifications and locations as text
+            status, page = await get_html(job["url"])
+            body = page_text(page) if status == 200 and isinstance(page, str) else ""
+            if len(body) > 500:
+                job["text"], job["details_checked"] = body, True
+                if "new york" in body.lower():
+                    job["location_verified"] = True
         job["pay"] = job.get("pay") or pay_from_text(job["text"])
         if not pay_ok(job["pay"], cfg):
             skipped_keys.append(job["key"])                      # known pay below your minimum
@@ -410,7 +591,10 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             skipped_keys.append(job["key"])                      # asks for too much experience: never show it again
             continue
         job["age"] = age_days(job, now)
-        job["flags"] = [pay_label(job["pay"])] + visa_flags(job["text"]) + ([f"asks for {years}+ years"] if years and years >= 3 else [])
+        if job.get("details_checked") is False:
+            job["flags"] = ["posting details not read; location, pay, visa, experience unchecked"]
+        else:
+            job["flags"] = [pay_label(job["pay"])] + visa_flags(job["text"]) + ([f"asks for {years}+ years"] if years and years >= 3 else [])
         shown.append((provider, slug, job))
         per_company[job["company"]] = per_company.get(job["company"], 0) + 1
     if mark:
@@ -424,6 +608,8 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     lines = [f"{len(shown)} new role{'s' if len(shown) != 1 else ''} (about {max(remaining, 0)} more waiting):"]
     for n, (_, _, j) in enumerate(shown, 1):
         where = j["location"] if len(j["location"]) <= 60 else j["location"][:57] + "..."
+        if j.get("location_verified") is False:
+            where += " (search filter; listing location unverified)"
         tier = f"  [tier {j['tier']}]" if j.get("tier") else ""
         posted = f" · posted {j['age']}d ago" if j.get("age") is not None else ""
         lines.append(f"\n• {j['company']}{tier}: {j['title']}  #{n}\n  {where}{' (remote ok)' if j['remote'] else ''}{posted}\n  {'; '.join(j['flags'])}\n  {j['url']}")

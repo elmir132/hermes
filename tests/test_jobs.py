@@ -324,13 +324,13 @@ class ConfigTests(unittest.TestCase):
     def test_every_company_uses_a_known_provider_and_has_what_it_needs(self):
         names = set()
         for c in CFG["companies"]:
-            self.assertIn(c["provider"], ("greenhouse", "lever", "ashby", "workday", "amazon"))
+            self.assertIn(c["provider"], ("greenhouse", "lever", "ashby", "workday", "amazon", "google", "apple"))
             self.assertTrue(c["name"])
             self.assertNotIn(c["name"], names)
             names.add(c["name"])
             if c["provider"] == "workday":
                 self.assertTrue(c["host"].endswith(".myworkdayjobs.com") and c["tenant"] and c["site"])
-            elif c["provider"] != "amazon":
+            elif c["provider"] not in ("amazon", "google", "apple"):
                 self.assertTrue(c["slug"])
 
 

@@ -421,6 +421,16 @@
    "name": "Amazon",
    "provider": "amazon",
    "tier": 2
+  },
+  {
+   "name": "Google",
+   "provider": "google",
+   "tier": 1
+  },
+  {
+   "name": "Apple",
+   "provider": "apple",
+   "tier": 1
   }
  ],
  "strong_title": [
