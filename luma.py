@@ -12,6 +12,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
+BROWSER_FILE = Path(__file__).parent / "browser_jobs.json"        # also holds the Cerebral Valley list (browser_reader.py)
 CONFIG_PATH = Path(__file__).parent / "hackathons_config.json"
 EXAMPLE_PATH = Path(__file__).parent / "hackathons_config.example.json"
 FEED = "https://api2.luma.com/discover/get-paginated-events?"
@@ -67,10 +68,19 @@ async def fetch_calendar(calendar: dict, get_json, get_html) -> list:
         cal_id = m.group(1) if m else None
     if not cal_id:
         return []
-    status, data = await get_json(CALENDAR_ITEMS + urlencode({"calendar_api_id": cal_id, "period": "future", "pagination_limit": 50}))
-    if status != 200 or not isinstance(data, dict):
-        return []
-    return [entry_to_event(e) for e in data.get("entries", []) if isinstance(e, dict)]
+    events, cursor = [], None
+    for _ in range(int(calendar.get("pages", 2))):
+        query = {"calendar_api_id": cal_id, "period": "future", "pagination_limit": 50}
+        if cursor:
+            query["pagination_cursor"] = cursor
+        status, data = await get_json(CALENDAR_ITEMS + urlencode(query))
+        if status != 200 or not isinstance(data, dict):
+            break
+        events += [entry_to_event(e) for e in data.get("entries", []) if isinstance(e, dict)]
+        cursor = data.get("next_cursor")
+        if not data.get("has_more") or not cursor:
+            break
+    return events
 
 
 def _pm_text(node) -> str:
@@ -95,10 +105,61 @@ def parse_event_page(page: str) -> dict:
     except (ValueError, KeyError, TypeError):
         return {}
     ticket = data.get("ticket_info") or {}
-    return {"description": re.sub(r"\s+", " ", _pm_text(data.get("description_mirror"))).strip()[:6000],
+    event = data.get("event") or {}
+    return {"start": event.get("start_at") or "", "end": event.get("end_at") or "", "description": re.sub(r"\s+", " ", _pm_text(data.get("description_mirror"))).strip()[:6000],
             "free": ticket.get("is_free"), "sold_out": bool(ticket.get("is_sold_out")), "near_capacity": bool(ticket.get("is_near_capacity")),
             "needs_approval": bool(ticket.get("require_approval")), "availability": data.get("registration_availability"),
             "guests": data.get("guest_count"), "hosts": [h.get("name", "") for h in data.get("hosts", []) if isinstance(h, dict)]}
+
+
+# ---------- Cerebral Valley's New York hackathon list (read by browser_reader.py) ----------
+WHEN = re.compile(r"([A-Z][a-z]{2}),?\s+([A-Z][a-z]{2})\s+(\d{1,2})\s*·\s*(\d{1,2}):(\d{2})\s*([AP]M)")
+
+
+def parse_when(text: str, now=None):
+    """'Fri, Oct 16 · 9:00 AM EDT' -> an aware New York datetime (the nearest such date), or None."""
+    m = WHEN.search(text or "")
+    if not m:
+        return None
+    now = (now or datetime.now(timezone.utc)).astimezone(NY)
+    try:
+        for year in (now.year, now.year + 1):
+            hour = int(m.group(4)) % 12 + (12 if m.group(6) == "PM" else 0)
+            when = datetime.strptime(f"{year} {m.group(2)} {m.group(3)} {hour}:{m.group(5)}", "%Y %b %d %H:%M").replace(tzinfo=NY)
+            if when >= now - timedelta(days=30):
+                return when
+    except ValueError:
+        return None
+    return None
+
+
+def browser_events(cfg: dict, now=None, path=None):
+    """Events from the browser file. Returns (events, notes). Luma links are opened later like any Luma event."""
+    path = Path(path or cfg.get("browser_file") or BROWSER_FILE)
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return [], ["no Cerebral Valley list yet (run browser_reader.py on the Mac)"]
+    notes, out = [], []
+    try:
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(data.get("fetched_at", "").replace("Z", "+00:00"))).days
+        if age >= 3:
+            notes.append(f"the Cerebral Valley list is {age} days old")
+    except ValueError:
+        pass
+    for source, block in (data.get("events") or {}).items():
+        if block.get("error"):
+            notes.append(f"{source}: {block['error']}")
+        for raw in block.get("events", []):
+            start = parse_when(raw.get("when", ""), now)
+            url = raw.get("url", "")
+            if not start or not raw.get("name") or not url.startswith("http"):
+                continue
+            m = re.match(r"https?://(?:www\.)?(?:luma\.com|lu\.ma)/([^/?#]+)", url)
+            out.append({"id": url, "name": raw["name"].strip(), "slug": m.group(1) if m else "", "link": url, "start": start.astimezone(timezone.utc).isoformat(),
+                        "end": (start + timedelta(hours=8)).astimezone(timezone.utc).isoformat(), "end_guessed": True, "online": False, "place": "New York, NY",
+                        "host": source, "guests": None, "waitlist": False, "trusted": True})
+    return out, notes
 
 
 # ---------- scoring ----------
@@ -170,10 +231,11 @@ def score_event(ev: dict, detail: dict, cfg: dict, now=None):
         score -= 1; warnings.append("paid ticket")
     if not ev["online"]:
         score += 1
-    if (end - start) >= timedelta(hours=6):
-        score += 1
-    if (end - start) >= timedelta(hours=30):
-        score += 1; reasons.append("multi-day")
+    if not ev.get("end_guessed"):                                    # an estimated end time proves nothing about length
+        if (end - start) >= timedelta(hours=6):
+            score += 1
+        if (end - start) >= timedelta(hours=30):
+            score += 1; reasons.append("multi-day")
     hours_away = (start - now.astimezone(NY)).total_seconds() / 3600
     if hours_away < 24:
         score -= 1; warnings.append("starts within a day")
@@ -185,7 +247,7 @@ def score_event(ev: dict, detail: dict, cfg: dict, now=None):
         score -= 2; warnings.append("waitlist or closed")
     if detail.get("needs_approval"):
         warnings.append("needs host approval, apply early")
-    conflicts = clashes(start, end, cfg)
+    conflicts = clashes(start, start + timedelta(hours=3) if ev.get("end_guessed") else end, cfg)
     if conflicts:
         score -= 2; warnings.append("clashes with " + ", ".join(conflicts))
     return score, reasons, warnings
@@ -195,26 +257,35 @@ async def find_hackathons(cfg: dict, get_json, get_html, now=None, limit=5):
     """Returns (ranked list of dicts, notes). Never raises on a failing source."""
     notes, events = [], []
     events += await fetch_feed(cfg, get_json)
+    city = [w.lower() for w in cfg.get("city_words", ["new york", "brooklyn", "manhattan", "nyc"])]
     for cal in cfg.get("calendars", []):
         found = await fetch_calendar(cal, get_json, get_html)
         if not found:
-            notes.append(f"couldn't read the calendar {cal.get('slug') or cal.get('calendar_api_id')}")
+            notes.append(f"couldn't read the calendar {cal.get('name') or cal.get('slug') or cal.get('calendar_api_id')}")
+        if cal.get("only_city", True):                         # big community calendars cover the whole world
+            found = [e for e in found if any(w in e["place"].lower() for w in city)]
+        for e in found:
+            e["trusted"] = bool(cal.get("all_events"))
         events += found
+    extra, extra_notes = browser_events(cfg, now)
+    events += extra
+    notes += extra_notes
     seen, candidates = set(), []
     for ev in events:
-        key = ev["id"] or ev["slug"]
-        if key in seen or not ev["name"] or not ev["slug"]:
+        key = ev["slug"] or ev["id"]
+        if key in seen or not ev["name"] or not (ev["slug"] or ev.get("link")):
             continue
         seen.add(key)
-        from_calendar = ev["host"] in cfg.get("trusted_hosts", [])
-        if HACK_WORDS.search(ev["name"]) or from_calendar:
+        if HACK_WORDS.search(ev["name"]) or ev.get("trusted") or ev["host"] in cfg.get("trusted_hosts", []):
             candidates.append(ev)
     ranked = []
     for ev in candidates[:MAX_DETAIL_PAGES]:
         detail = {}
-        if get_html:
+        if get_html and ev["slug"]:
             status, page = await get_html(EVENT_PAGE + ev["slug"])
             detail = parse_event_page(page) if status == 200 else {}
+            if detail.get("start") and detail.get("end"):          # the event page knows the real times
+                ev = {**ev, "start": detail["start"], "end": detail["end"], "end_guessed": False}
         scored = score_event(ev, detail, cfg, now)
         if scored:
             ranked.append({**ev, "detail": detail, "score": scored[0], "reasons": scored[1], "warnings": scored[2]})
@@ -228,12 +299,16 @@ def format_hackathons(ranked: list, notes: list) -> str:
     lines = [f"{len(ranked)} hackathon{'s' if len(ranked) != 1 else ''} worth a look, best first:"]
     for n, r in enumerate(ranked, 1):
         start, end = local(r["start"]), local(r["end"])
-        when = start.strftime("%a %b %d, %-I:%M %p") + (" to " + end.strftime("%-I:%M %p") if end.date() == start.date() else " to " + end.strftime("%a %-I:%M %p"))
+        when = start.strftime("%a %b %d, %-I:%M %p")
+        if not r.get("end_guessed"):
+            when += (" to " + end.strftime("%-I:%M %p") if end.date() == start.date() else " to " + end.strftime("%a %-I:%M %p"))
         price = "free" if r["detail"].get("free") else ("paid" if r["detail"].get("free") is False else "price not read")
+        if not r["slug"]:
+            price = "details not read (not a Luma page)"
         place = "online" if r["online"] else (r["place"] or "New York")
         guests = r["detail"].get("guests") or r.get("guests")
         lines.append(f"\n{n}. {r['name']}\n   {when} · {place} · {price}" + (f" · {guests} signed up" if guests else "") +
                      (f"\n   why: {'; '.join(r['reasons'])}" if r["reasons"] else "") +
-                     (f"\n   watch out: {'; '.join(r['warnings'])}" if r["warnings"] else "") + f"\n   https://luma.com/{r['slug']}")
+                     (f"\n   watch out: {'; '.join(r['warnings'])}" if r["warnings"] else "") + f"\n   {r.get('link') or 'https://luma.com/' + r['slug']}")
     lines.append("\nThe score is a rough guide from the event page. Read it before you join. I never register you for anything.")
     return ("\n".join(lines))[:OUTPUT_CHARS] + (("\n(" + "; ".join(notes) + ")") if notes else "")

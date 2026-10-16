@@ -1,7 +1,32 @@
 {
  "place": "discplace-Izx1rQVSh8njYpP",
  "feed_pages": 3,
- "calendars": [],
+ "calendars": [
+  {
+   "name": "The AI Collective",
+   "calendar_api_id": "cal-E74MDlDKBaeAwXK"
+  },
+  {
+   "name": "Claude Community Events",
+   "calendar_api_id": "cal-TOpA5LAFfuDeFpu"
+  },
+  {
+   "name": "n8n Community Events",
+   "calendar_api_id": "cal-rKZGvZjZWgFjKWW"
+  },
+  {
+   "name": "Codex Community Events",
+   "calendar_api_id": "cal-63UOFcweB97l2gc"
+  },
+  {
+   "name": "Latent.Space",
+   "calendar_api_id": "cal-mc9ZW5C3TzHDv6L"
+  },
+  {
+   "name": "OpenClaw Meetups",
+   "calendar_api_id": "cal-iOipAs7mv59Hbuz"
+  }
+ ],
  "trusted_hosts": [],
  "sponsors": [
   "OpenAI",
@@ -44,5 +69,11 @@
    "to": "11:15"
   }
  ],
- "busy_dates": []
+ "busy_dates": [],
+ "city_words": [
+  "new york",
+  "brooklyn",
+  "manhattan",
+  "nyc"
+ ]
 }

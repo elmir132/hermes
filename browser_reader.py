@@ -1,4 +1,4 @@
-"""Reads Meta, Microsoft and Netflix job search pages in a real Chrome and writes browser_jobs.json.
+"""Reads Meta, Microsoft and Netflix job pages and Cerebral Valley's New York hackathon list in a real Chrome and writes browser_jobs.json.
 
 Runs on your Mac, not on the server (the server is too small for a browser). Those three sites load their jobs
 with JavaScript, so a plain request sees nothing. This opens each public search page the way a visitor would,
@@ -84,6 +84,26 @@ def parse_netflix_cards(cards: list, search_url: str) -> list:
     return jobs
 
 
+def parse_cerebral_cards(cards: list) -> list:
+    """cards: [{"href": outbound event link, "card": text of the card}] from cerebralvalley.ai/events."""
+    events, seen = [], set()
+    for c in cards:
+        href = (c.get("href") or "").split("?")[0]
+        lines = _lines(c.get("card", ""))
+        when = next((l for l in lines if " · " in l and re.search(r"\d{1,2}:\d{2}\s?[AP]M", l)), "")
+        # layout: month, day, title, then the date line
+        title = ""
+        for i, l in enumerate(lines):
+            if re.fullmatch(r"\d{1,2}", l) and i + 1 < len(lines):
+                title = lines[i + 1]
+                break
+        if not href.startswith("http") or not title or not when or href in seen:
+            continue
+        seen.add(href)
+        events.append({"name": title, "when": when, "url": href})
+    return events
+
+
 # ---------- the browser part ----------
 SOURCES = {
     "Meta": {"url": "https://www.metacareers.com/jobs?q={q}&offices[0]=New%20York%2C%20NY"},
@@ -97,6 +117,9 @@ JS_META = """() => [...document.querySelectorAll('a[role="link"]')].filter(a => 
     .slice(0, 40).map(a => ({text: a.innerText, href: a.getAttribute('href') || ''}))"""
 JS_EIGHTFOLD = """() => [...document.querySelectorAll('a[href*="/careers/job/"]')].slice(0, 40)
     .map(a => ({text: a.innerText, href: a.getAttribute('href') || ''}))"""
+JS_CEREBRAL = """() => [...document.querySelectorAll('a[href^="http"]')].filter(a => !/cerebralvalley\\.ai/.test(a.href))
+    .map(a => ({href: a.href, card: a.parentElement && a.parentElement.parentElement ? a.parentElement.parentElement.innerText : ''}))"""
+EVENT_SOURCES = {"Cerebral Valley": {"url": "https://cerebralvalley.ai/events?type=HACKATHON&locations=NYC"}}
 JS_NETFLIX = """() => [...document.querySelectorAll('div.position-card')].slice(0, 40).map(e => ({text: e.innerText}))"""
 
 
@@ -116,9 +139,26 @@ def read_source(page, name: str, query: str):
     return parse_netflix_cards(page.evaluate(JS_NETFLIX), cfg["search"]), None
 
 
+def read_events(page, name: str):
+    """Loads an events list page once and returns (events, error)."""
+    resp = page.goto(EVENT_SOURCES[name]["url"], wait_until="domcontentloaded", timeout=45000)
+    page.wait_for_timeout(LOAD_WAIT_MS + 3000)
+    if resp is not None and resp.status >= 400:
+        return [], f"HTTP {resp.status}"
+    if BLOCK_WORDS.search(page.inner_text("body")[:3000]):
+        return [], "the site showed a block or captcha page; stopped"
+    return parse_cerebral_cards(page.evaluate(JS_CEREBRAL)), None
+
+
 def run(only=None, out=OUT, queries=QUERIES):
     from playwright.sync_api import sync_playwright
-    result = {"fetched_at": datetime.now(timezone.utc).isoformat(), "sources": {}}
+    result = {"fetched_at": datetime.now(timezone.utc).isoformat(), "sources": {}, "events": {}}
+    if only:                                                       # a partial run updates its part and keeps the rest of the file
+        try:
+            previous = json.loads(Path(out).read_text())
+            result = {"fetched_at": previous.get("fetched_at", result["fetched_at"]), "sources": previous.get("sources", {}), "events": previous.get("events", {})}
+        except (OSError, ValueError):
+            pass
     with sync_playwright() as p:
         browser = p.chromium.launch(channel="chrome", headless=True)
         context = browser.new_context(viewport={"width": 1300, "height": 900})
@@ -142,6 +182,17 @@ def run(only=None, out=OUT, queries=QUERIES):
                         jobs.append(job)
                 time.sleep(PAUSE_BETWEEN_PAGES_S)
             result["sources"][name] = {"jobs": jobs, "error": error}
+        for name in EVENT_SOURCES:
+            if only and name.lower() != only.lower().replace("-", " "):
+                continue
+            page = context.new_page()
+            try:
+                found, error = read_events(page, name)
+            except Exception as e:
+                found, error = [], f"{type(e).__name__}: {str(e)[:80]}"
+            finally:
+                page.close()
+            result["events"][name] = {"events": found, "error": error}
         browser.close()
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -152,12 +203,14 @@ def run(only=None, out=OUT, queries=QUERIES):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Read Meta, Microsoft and Netflix job pages in Chrome.")
-    ap.add_argument("--only", help="one source: Meta, Microsoft or Netflix")
+    ap.add_argument("--only", help="one source: Meta, Microsoft, Netflix or Cerebral Valley")
     ap.add_argument("--out", default=str(OUT))
     args = ap.parse_args(argv)
     result = run(args.only, args.out)
     for name, src in result["sources"].items():
         print(f"{name}: {len(src['jobs'])} listings" + (f" (error: {src['error']})" if src["error"] else ""))
+    for name, src in result["events"].items():
+        print(f"{name}: {len(src['events'])} events" + (f" (error: {src['error']})" if src["error"] else ""))
     print("written to", args.out)
     return 0
 

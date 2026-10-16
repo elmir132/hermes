@@ -26,8 +26,8 @@ def entry(i, name, start, end, host="AI After 5", guests=10, waitlist=False, onl
                       "location_type": "online" if online else "offline", "geo_address_info": {"city_state": "New York, NY"}}}
 
 
-def page(desc="Build AI agents. Prizes: $30K in token prizes to winners.", free=True, sold_out=False, approval=False, availability="open", guests=40):
-    data = {"description_mirror": {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": desc}]}]},
+def page(desc="Build AI agents. Prizes: $30K in token prizes to winners.", free=True, sold_out=False, approval=False, availability="open", guests=40, start=None, end=None):
+    data = {"event": {"start_at": start, "end_at": end} if start else {}, "description_mirror": {"type": "doc", "content": [{"type": "paragraph", "content": [{"type": "text", "text": desc}]}]},
             "ticket_info": {"is_free": free, "is_sold_out": sold_out, "is_near_capacity": False, "require_approval": approval},
             "registration_availability": availability, "guest_count": guests, "hosts": [{"name": "Obvious"}]}
     blob = json.dumps({"props": {"pageProps": {"initialData": {"data": data}}}})
