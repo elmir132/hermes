@@ -431,6 +431,299 @@
    "name": "Apple",
    "provider": "apple",
    "tier": 1
+  },
+  {
+   "name": "SpaceX",
+   "provider": "greenhouse",
+   "slug": "spacex",
+   "tier": 2
+  },
+  {
+   "name": "Tower Research Capital",
+   "provider": "greenhouse",
+   "slug": "towerresearchcapital",
+   "tier": 2
+  },
+  {
+   "name": "Voleon",
+   "provider": "lever",
+   "slug": "voleon",
+   "tier": 2
+  },
+  {
+   "name": "Wiz",
+   "provider": "ashby",
+   "slug": "wiz",
+   "tier": 2
+  },
+  {
+   "name": "Waymo",
+   "provider": "greenhouse",
+   "slug": "waymo",
+   "tier": 2
+  },
+  {
+   "name": "Kraken",
+   "provider": "lever",
+   "slug": "kraken",
+   "tier": 3
+  },
+  {
+   "name": "Ripple",
+   "provider": "greenhouse",
+   "slug": "ripple",
+   "tier": 3
+  },
+  {
+   "name": "Clear Street",
+   "provider": "greenhouse",
+   "slug": "clearstreet",
+   "tier": 3
+  },
+  {
+   "name": "Alpaca",
+   "provider": "greenhouse",
+   "slug": "alpaca",
+   "tier": 3
+  },
+  {
+   "name": "Betterment",
+   "provider": "greenhouse",
+   "slug": "betterment",
+   "tier": 3
+  },
+  {
+   "name": "Wealthfront",
+   "provider": "lever",
+   "slug": "wealthfront",
+   "tier": 3
+  },
+  {
+   "name": "Klaviyo",
+   "provider": "greenhouse",
+   "slug": "klaviyo",
+   "tier": 3
+  },
+  {
+   "name": "Fivetran",
+   "provider": "greenhouse",
+   "slug": "fivetran",
+   "tier": 3
+  },
+  {
+   "name": "Duolingo",
+   "provider": "greenhouse",
+   "slug": "duolingo",
+   "tier": 3
+  },
+  {
+   "name": "Toast",
+   "provider": "greenhouse",
+   "slug": "toast",
+   "tier": 3
+  },
+  {
+   "name": "Lyft",
+   "provider": "greenhouse",
+   "slug": "lyft",
+   "tier": 3
+  },
+  {
+   "name": "Webflow",
+   "provider": "greenhouse",
+   "slug": "webflow",
+   "tier": 3
+  },
+  {
+   "name": "Verkada",
+   "provider": "greenhouse",
+   "slug": "verkada",
+   "tier": 3
+  },
+  {
+   "name": "Samsara",
+   "provider": "greenhouse",
+   "slug": "samsara",
+   "tier": 3
+  },
+  {
+   "name": "Vanta",
+   "provider": "ashby",
+   "slug": "vanta",
+   "tier": 3
+  },
+  {
+   "name": "Drata",
+   "provider": "ashby",
+   "slug": "drata",
+   "tier": 3
+  },
+  {
+   "name": "Rubrik",
+   "provider": "greenhouse",
+   "slug": "rubrik",
+   "tier": 3
+  },
+  {
+   "name": "Tailscale",
+   "provider": "greenhouse",
+   "slug": "tailscale",
+   "tier": 3
+  },
+  {
+   "name": "1Password",
+   "provider": "ashby",
+   "slug": "1password",
+   "tier": 3
+  },
+  {
+   "name": "Zapier",
+   "provider": "ashby",
+   "slug": "zapier",
+   "tier": 3
+  },
+  {
+   "name": "Deel",
+   "provider": "ashby",
+   "slug": "deel",
+   "tier": 3
+  },
+  {
+   "name": "Miro",
+   "provider": "ashby",
+   "slug": "miro",
+   "tier": 3
+  },
+  {
+   "name": "Cerebras",
+   "provider": "ashby",
+   "slug": "cerebras",
+   "tier": 3
+  },
+  {
+   "name": "Etched",
+   "provider": "ashby",
+   "slug": "etched",
+   "tier": 3
+  },
+  {
+   "name": "Tenstorrent",
+   "provider": "greenhouse",
+   "slug": "tenstorrent",
+   "tier": 3
+  },
+  {
+   "name": "Lightmatter",
+   "provider": "greenhouse",
+   "slug": "lightmatter",
+   "tier": 3
+  },
+  {
+   "name": "Shield AI",
+   "provider": "lever",
+   "slug": "shieldai",
+   "tier": 3
+  },
+  {
+   "name": "Saronic",
+   "provider": "ashby",
+   "slug": "saronic",
+   "tier": 3
+  },
+  {
+   "name": "Skydio",
+   "provider": "ashby",
+   "slug": "skydio",
+   "tier": 3
+  },
+  {
+   "name": "Archer Aviation",
+   "provider": "greenhouse",
+   "slug": "archer",
+   "tier": 3
+  },
+  {
+   "name": "Apex Fintech",
+   "provider": "greenhouse",
+   "slug": "apex",
+   "tier": 3
+  },
+  {
+   "name": "CB Insights",
+   "provider": "greenhouse",
+   "slug": "cbinsights",
+   "tier": 3
+  },
+  {
+   "name": "Oura",
+   "provider": "greenhouse",
+   "slug": "oura",
+   "tier": 3
+  },
+  {
+   "name": "Whoop",
+   "provider": "lever",
+   "slug": "whoop",
+   "tier": 3
+  },
+  {
+   "name": "Strava",
+   "provider": "ashby",
+   "slug": "strava",
+   "tier": 3
+  },
+  {
+   "name": "Midjourney",
+   "provider": "ashby",
+   "slug": "midjourney",
+   "tier": 4
+  },
+  {
+   "name": "Character.AI",
+   "provider": "ashby",
+   "slug": "character",
+   "tier": 4
+  },
+  {
+   "name": "Airbyte",
+   "provider": "ashby",
+   "slug": "airbyte",
+   "tier": 4
+  },
+  {
+   "name": "D-Matrix",
+   "provider": "ashby",
+   "slug": "d-matrix",
+   "tier": 4
+  },
+  {
+   "name": "ClickUp",
+   "provider": "ashby",
+   "slug": "clickup",
+   "tier": 4
+  },
+  {
+   "name": "Meta",
+   "provider": "browser",
+   "source": "Meta",
+   "tier": 1
+  },
+  {
+   "name": "Microsoft",
+   "provider": "browser",
+   "source": "Microsoft",
+   "tier": 1
+  },
+  {
+   "name": "Netflix",
+   "provider": "browser",
+   "source": "Netflix",
+   "tier": 1
+  },
+  {
+   "name": "Hacker News: Who is hiring",
+   "provider": "hn",
+   "tier": 3
   }
  ],
  "strong_title": [

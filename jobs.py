@@ -5,6 +5,7 @@ using a separate HTML-only fetch. No login or model call is used by the watcher;
 locations, so posting text cannot steer it. It never applies to anything. Search-page roles are only listings:
 their descriptions, pay, visa terms and experience requirements are not checked.
 """
+import asyncio
 import html as html_lib
 import json
 import re
@@ -38,6 +39,12 @@ GOOGLE_QUERIES = ["software engineer", "machine learning engineer", "new grad so
 APPLE_SEARCH = "https://jobs.apple.com/en-us/search"
 APPLE_QUERIES = ["software engineer", "machine learning engineer", "new grad software engineer"]
 SEARCH_PAGE_LIMIT = 20
+CONCURRENCY = 4
+BROWSER_FILE = Path(__file__).parent / "browser_jobs.json"      # written daily by browser_reader.py on the Mac
+BROWSER_STALE_DAYS = 3
+HN_SEARCH = "https://hn.algolia.com/api/v1/search_by_date?" + urlencode({"query": "Ask HN: Who is hiring?", "tags": "story,author_whoishiring", "hitsPerPage": 5})
+HN_ITEM = "https://hn.algolia.com/api/v1/items/{id}"
+HN_TITLE_WORDS = ("engineer", "developer", "scientist", "researcher", "swe", "sde", "programmer", "architect", "devops", "sre", "mts", "technical staff")
 WORKDAY_PAGE = 20
 WORKDAY_PAGES = 5            # at most 100 roles per company and run
 
@@ -363,6 +370,82 @@ async def fetch_apple(company: dict, get_html, cfg: dict):
     return found, ("; ".join(errors) if errors else None)
 
 
+# ---------- jobs read by a real browser on the Mac (Meta, Microsoft, Netflix) ----------
+def browser_jobs(company: dict, cfg: dict, now=None, path=None):
+    """Reads browser_jobs.json (made by browser_reader.py). Returns (jobs, error_or_None)."""
+    path = Path(path or company.get("file") or BROWSER_FILE)
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return [], "no browser data yet (run browser_reader.py on the Mac)"
+    source = (data.get("sources") or {}).get(company.get("source", company["name"])) or {}
+    now = now or datetime.now(timezone.utc)
+    try:
+        fetched = datetime.fromisoformat(data.get("fetched_at", "").replace("Z", "+00:00"))
+        age = (now - fetched).days
+    except ValueError:
+        fetched, age = None, None
+    out = []
+    for raw in source.get("jobs", []):
+        if not isinstance(raw, dict) or not raw.get("title") or not raw.get("url"):
+            continue
+        out.append({"key": f"br:{company['name']}:{raw['url']}:{raw['title']}", "company": company["name"], "title": raw["title"].strip(),
+                    "location": raw.get("location", ""), "remote": "remote" in (raw.get("location", "") + raw.get("posted", "")).lower(),
+                    "url": raw["url"], "published": "", "text": "", "employment": "", "pay": None, "details_checked": False,
+                    "location_verified": True if raw.get("location") else False})
+    errors = []
+    if source.get("error"):
+        errors.append(f"browser reader: {source['error']}")
+    if age is not None and age >= BROWSER_STALE_DAYS:
+        errors.append(f"browser data is {age} days old")
+    return out, ("; ".join(errors) or None)
+
+
+# ---------- Hacker News "Ask HN: Who is hiring?" (a monthly thread where startups post roles) ----------
+def hn_job(comment: dict, company_name: str):
+    html_text = comment.get("text") or ""
+    plain = html_lib.unescape(re.sub(r"<[^>]+>", " ", re.sub(r"<p>|<br\s*/?>", "\n", html_text, flags=re.I)))
+    lines = [l.strip() for l in plain.splitlines() if l.strip()]
+    if not lines or "|" not in lines[0]:
+        return None
+    head = lines[0]
+    parts = [p.strip(" *_") for p in head.split("|") if p.strip()]
+    if len(parts) < 3:
+        return None
+    company = parts[0][:60]
+    title = next((p for p in parts[1:5] if any(w in p.lower() for w in HN_TITLE_WORDS)), "")
+    if not title:
+        return None
+    place = [p for p in parts[1:] if p != title and not re.fullmatch(r"(?i)(remote|onsite|on-site|hybrid|full[- ]?time|part[- ]?time)", p)
+             and not re.match(r"(?i)(no\s+)?visa\b", p)]
+    low = head.lower()
+    note = ""
+    if re.search(r"\bno\s+visa", low):
+        note = "We cannot provide visa sponsorship. "
+    elif re.search(r"\bvisa\b", low):
+        note = "Visa sponsorship is available (stated by the poster). "
+    link = re.search(r'href="([^"]+)"', html_text)
+    url = html_lib.unescape(link.group(1)) if link else f"https://news.ycombinator.com/item?id={comment.get('id')}"
+    return {"key": f"hn:{comment.get('id')}", "company": company, "title": title[:90], "location": "; ".join(place)[:80] or ("Remote" if "remote" in low else ""),
+            "remote": "remote" in low, "url": url, "published": comment.get("created_at", ""), "text": note + " ".join(lines)[:5000],
+            "employment": "intern" if "intern" in low else ("parttime" if re.search(r"part[- ]?time", low) else ""), "pay": None}
+
+
+async def fetch_hn(company: dict, get_json, now=None):
+    status, data = await get_json(HN_SEARCH)
+    if status != 200 or not isinstance(data, dict):
+        return [], f"HTTP {status}"
+    now = now or datetime.now(timezone.utc)
+    threads = [h for h in data.get("hits", []) if str(h.get("title", "")).startswith("Ask HN: Who is hiring?")]
+    if not threads:
+        return [], "no hiring thread found"
+    status, thread = await get_json(HN_ITEM.format(id=threads[0]["objectID"]))
+    if status != 200 or not isinstance(thread, dict):
+        return [], f"HTTP {status}"
+    out = [j for j in (hn_job(c, company["name"]) for c in thread.get("children", []) if isinstance(c, dict)) if j]
+    return out, None
+
+
 # ---------- matching ----------
 def has(text: str, words) -> bool:
     """True when any word or phrase appears as a whole word ('intern' does not match 'internal')."""
@@ -385,6 +468,9 @@ def title_matches(title: str, cfg: dict):
     t = re.sub(r"\s+", " ", re.sub(r"[^a-z0-9+ ]", " ", title.lower()))
     head = re.split(r"[,(\-–:|]", title)[0].lower().strip()
     if re.search(r"(?:^|\s)(iii|iv|v|vi|[4-9])$", head):          # "Engineer 4", "Developer IV": a senior level number
+        return False, 0, []
+    levels = re.search(r"(?:^|\s)(\d)\s*/\s*(\d)$", head)       # "Engineer 4/5": senior when even the lower level is 4 or more
+    if levels and min(int(levels.group(1)), int(levels.group(2))) >= 4:
         return False, 0, []
     t = re.sub(r"member of technical staff", " mts ", t)       # an ordinary engineering title, not the senior "staff" level
     if has(t, cfg.get("exclude_title", [])):
@@ -512,24 +598,35 @@ def mark_seen(path, keys, now=None):
 async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None, get_html=None):
     """get_json(url) -> (status, JSON); get_html(url) -> (status, text). Returns text, count and errors."""
     candidates, errors = [], []
-    for company in cfg.get("companies", []):
+    gate = asyncio.Semaphore(CONCURRENCY)                         # a few companies at a time; each is a different server
+
+    async def read_company(company):
         provider, name = company["provider"], company.get("name", company.get("slug"))
         slug = company.get("slug", company.get("tenant", ""))
-        if provider == "amazon":
-            found, err = await fetch_amazon(dict(company, name=name), get_json)
-        elif provider == "workday":
-            found, err = await fetch_workday(dict(company, name=name), get_json, now)
-        elif provider in ("google", "apple"):
-            if get_html is None:
-                found, err = [], "HTML reader is not configured"
-            elif provider == "google":
-                found, err = await fetch_google(dict(company, name=name), get_html)
+        async with gate:
+            if provider == "amazon":
+                found, err = await fetch_amazon(dict(company, name=name), get_json)
+            elif provider == "workday":
+                found, err = await fetch_workday(dict(company, name=name), get_json, now)
+            elif provider in ("google", "apple"):
+                if get_html is None:
+                    found, err = [], "HTML reader is not configured"
+                elif provider == "google":
+                    found, err = await fetch_google(dict(company, name=name), get_html)
+                else:
+                    found, err = await fetch_apple(dict(company, name=name), get_html, cfg)
+            elif provider == "browser":
+                found, err = browser_jobs(company, cfg, now)
+            elif provider == "hn":
+                found, err = await fetch_hn(dict(company, name=name), get_json, now)
             else:
-                found, err = await fetch_apple(dict(company, name=name), get_html, cfg)
-        else:
-            url = {"greenhouse": GREENHOUSE, "lever": LEVER, "ashby": ASHBY}[provider].format(slug=slug)
-            status, payload = await get_json(url)
-            found, err = (jobs_from_feed(provider, payload, name), None) if status == 200 else ([], f"HTTP {status}")
+                url = {"greenhouse": GREENHOUSE, "lever": LEVER, "ashby": ASHBY}[provider].format(slug=slug)
+                status, payload = await get_json(url)
+                found, err = (jobs_from_feed(provider, payload, name), None) if status == 200 else ([], f"HTTP {status}")
+        return company, provider, slug, name, found, err
+
+    results = await asyncio.gather(*(read_company(c) for c in cfg.get("companies", [])))
+    for company, provider, slug, name, found, err in results:
         if err:
             errors.append(f"{name}: {err}")
             if not found:

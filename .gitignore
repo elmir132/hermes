@@ -24,3 +24,4 @@ env/
 .vscode/
 fit_profile.json
 applications.db
+browser_jobs.json

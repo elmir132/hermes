@@ -10,12 +10,12 @@ import jobs  # noqa: E402
 
 
 class SearchPageTests(unittest.TestCase):
-    def test_config_enables_google_and_apple_but_not_netflix(self):
+    def test_config_enables_google_and_apple_and_reads_netflix_through_the_browser(self):
         companies = jobs.load_config()["companies"]
         providers = {company["name"]: company["provider"] for company in companies}
         self.assertEqual(providers["Google"], "google")
         self.assertEqual(providers["Apple"], "apple")
-        self.assertNotIn("Netflix", providers)
+        self.assertEqual(providers.get("Netflix"), "browser")       # Netflix's own API is switched off for us; it comes from the browser reader
 
     def test_google_resolves_relative_links_prefers_accessible_title_and_deduplicates_urls(self):
         page = '''
