@@ -65,7 +65,12 @@ def clean_text(text: str, limit: int = BODY_CHARS, keep_links: bool = False) -> 
     return text[:limit]
 
 
-def extract_body(payload: dict, include_links: bool = False) -> str:
+def extract_body_long(payload: dict, limit: int) -> str:
+    """Like extract_body but keeps up to `limit` characters (long newsletters such as the Career Digest)."""
+    return extract_body(payload, limit=limit)
+
+
+def extract_body(payload: dict, include_links: bool = False, limit: int = BODY_CHARS) -> str:
     """Prefer text/plain; fall back to HTML with the tags removed."""
     plain, rich = [], []
 
@@ -82,7 +87,7 @@ def extract_body(payload: dict, include_links: bool = False) -> str:
             walk(sub)
 
     walk(payload or {})
-    return clean_text(" ".join(plain) if plain else " ".join(rich), keep_links=include_links)
+    return clean_text(" ".join(plain) if plain else " ".join(rich), limit=limit, keep_links=include_links)
 
 
 def header(payload: dict, name: str) -> str:

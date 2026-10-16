@@ -25,3 +25,4 @@ env/
 fit_profile.json
 applications.db
 browser_jobs.json
+hackathons_config.json

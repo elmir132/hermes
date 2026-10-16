@@ -20,8 +20,10 @@ from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
 import apply
+import campus
 import digest
 import jobs
+import luma
 
 # ── Markdown → Telegram HTML ──────────────────────────────────────────────────
 def md_to_html(text: str) -> str:
@@ -1683,6 +1685,27 @@ async def _followup_loop():
         except Exception:
             pass
         await asyncio.sleep(60)
+
+# ── Hackathons (Luma) and company sessions on campus (from your career emails) ──
+@dp.message(Command("hackathons"))
+async def cmd_hackathons(msg: Message):
+    if not allowed(msg): return
+    words = msg.text.split()[1:]
+    limit = int(words[0]) if words and words[0].isdigit() and 1 <= int(words[0]) <= 10 else 5
+    await msg.answer("Looking through Luma's New York list, about 20 seconds...")
+    cfg = await asyncio.to_thread(luma.load_config)
+    ranked, notes = await luma.find_hackathons(cfg, _jobs_get, _jobs_get_html, limit=limit)
+    await msg.answer(luma.format_hackathons(ranked, notes))
+
+@dp.message(Command("campus"))
+async def cmd_campus(msg: Message):
+    if not allowed(msg): return
+    await bot.send_chat_action(msg.chat.id, "typing")
+    accounts = await asyncio.to_thread(_all_creds)
+    jobs_cfg = await asyncio.to_thread(jobs.load_config)
+    tiers = {c["name"]: c.get("tier", 9) for c in jobs_cfg.get("companies", []) if c.get("tier")}
+    cfg = await asyncio.to_thread(luma.load_config)
+    await msg.answer(await campus.build_campus([(n, c.token) for n, c in accounts], _digest_get, one_shot, cfg, tiers))
 
 @dp.message(Command("tasks"))
 async def cmd_tasks(msg: Message):
