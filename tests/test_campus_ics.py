@@ -108,6 +108,27 @@ class SessionTests(unittest.TestCase):
         self.assertIn("no company sessions", campus.format_ics_sessions(campus.ics_sessions(cal(), "", CFG, TIERS, TODAY)))
 
 
+def named(name, *events):
+    return "BEGIN:VCALENDAR\r\nX-WR-CALNAME:" + name + "\r\n" + "\r\n".join(events) + "\r\nEND:VCALENDAR\r\n"
+
+
+class CareerFeedTests(unittest.TestCase):
+    def test_every_event_in_a_career_management_feed_counts_even_without_a_keyword(self):
+        feed = named("Cornell Tech Career Management", vevent('Alumna Talk - "What is Forward Deployed Engineering?"', ";TZID=America/New_York:20261027T150000", ";TZID=America/New_York:20261027T160000", "BLM 161"),
+                     vevent("Climate Advocacy Symposium", ":20261016T203000Z", ":20261017T213000Z", "Ithaca, NY"), vevent("Pumpkin Contest", ":20261028T160000Z", ":20261028T180000Z"))
+        got = campus.ics_sessions(feed, "", CFG, TIERS, TODAY)
+        self.assertEqual([s["company"] for s in got], ['Alumna Talk - "What is Forward Deployed Engineering?"'])
+
+    def test_the_same_title_in_the_public_feed_is_not_trusted(self):
+        feed = named("Cornell Tech", vevent("Alumna Talk", ":20261027T190000Z", ":20261027T200000Z", "BLM 161"))
+        self.assertEqual(campus.ics_sessions(feed, "", CFG, TIERS, TODAY), [])
+
+    def test_two_feeds_joined_together_keep_their_own_calendar_names(self):
+        joined = named("Cornell Tech", vevent("Plain Event", ":20261027T190000Z", ":20261027T200000Z")) + named("Cornell Tech Career Management", vevent("Alumna Talk", ":20261028T190000Z", ":20261028T200000Z"))
+        cals = {e["title"]: e["cal"] for e in campus.parse_ics(joined)}
+        self.assertEqual(cals, {"Plain Event": "Cornell Tech", "Alumna Talk": "Cornell Tech Career Management"})
+
+
 class MoreFeedTests(unittest.TestCase):
     def test_several_links_are_combined_and_a_visa_talk_is_shown_as_relevant(self):
         talk = cal(vevent("Visas After Graduation with a Lawyer", ":20261022T190000Z", ":20261022T200000Z", "Sign in to download the location"))
@@ -123,6 +144,11 @@ class MoreFeedTests(unittest.TestCase):
         self.assertNotIn("Sign in to download", text)                       # the hidden-room placeholder is dropped
         self.assertIn("1 of your calendar links could not be read", text)
         self.assertIn("https://a/3.ics", seen)                              # webcal:// was converted
+
+    def test_a_registered_relevant_event_is_marked(self):
+        talk = vevent("Visas After Graduation with a Lawyer", ":20261022T190000Z", ":20261022T200000Z")
+        text = campus.format_ics_sessions([], campus.ics_other(cal(talk), CFG, [], TODAY, mine_text=cal(talk)))
+        self.assertIn("Visas After Graduation with a Lawyer  ✅ you are registered", text)
 
     def test_only_relevant_non_company_events_are_added(self):
         feed = cal(vevent("Pumpkin Decorating Contest", ":20261028T160000Z", ":20261028T170000Z"), vevent("Resume Workshop", ":20261027T160000Z", ":20261027T170000Z"))

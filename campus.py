@@ -147,6 +147,8 @@ async def build_campus(accounts, get_json, summarize, cfg: dict, tiers: dict, to
 # The links are made for calendar apps and may contain a private key, so they come from the environment,
 # are never printed or logged, and are used only to read the file.
 SESSION_WORDS = re.compile(r"info(?:rmation)? session|recruit|career|employer|hiring|networking|coffee chat|fireside|panel|meet(?: the)? team|tech talk|office hours with|open house", re.I)
+CAREER_FEED = re.compile(r"career", re.I)
+SOCIAL_TITLE = re.compile(r"symposium|pumpkin|hockey|gratitude|party|trivia|game night", re.I)
 DESC_WORDS = re.compile(r"info(?:rmation)? session|recruit|hiring|employer|internship|full[- ]time (?:role|position|opportunit)", re.I)
 WHO_WORDS = re.compile(r"open to|only open|class of|2027|2028|grad|master|international|cpt|opt|sponsorship|citizen|visa", re.I)
 
@@ -182,10 +184,14 @@ def _when(name: str, params: str, value: str):
 
 def parse_ics(text: str) -> list:
     """VEVENT blocks as dicts: title, start, end, place, description, url. Broken events are skipped."""
-    events, current = [], None
+    events, current, calendar = [], None, ""
     for line in _unfold(text):
+        if line.upper().startswith("X-WR-CALNAME:"):
+            calendar = clean(line.split(":", 1)[1], 80)
+        elif line.strip() == "BEGIN:VCALENDAR":
+            calendar = ""
         if line.strip() == "BEGIN:VEVENT":
-            current = {}
+            current = {"cal": calendar}
         elif line.strip() == "END:VEVENT":
             if current and current.get("start") and current.get("title"):
                 current.setdefault("end", current["start"] + timedelta(hours=1))
@@ -237,7 +243,10 @@ def ics_sessions(all_text: str, mine_text: str, cfg: dict, tiers: dict, today=No
             continue
         desc = e.get("description", "")
         tier = tier_of(e["title"], tiers)                                  # a company name only ranks an event; it never makes it count
-        if not (SESSION_WORDS.search(e["title"]) or DESC_WORDS.search(desc[:300])):
+        from_career_feed = bool(CAREER_FEED.search(e.get("cal", "")))      # everything in a Career Management calendar is a career event
+        if not (from_career_feed or SESSION_WORDS.search(e["title"]) or DESC_WORDS.search(desc[:300])):
+            continue
+        if from_career_feed and (re.search(r"ithaca", e.get("place", ""), re.I) or SOCIAL_TITLE.search(e["title"])):
             continue
         key = (e["title"].lower(), e["start"].isoformat())
         if key in seen:
@@ -254,18 +263,20 @@ def ics_sessions(all_text: str, mine_text: str, cfg: dict, tiers: dict, today=No
 RELEVANT = re.compile(r"visa|\bopt\b|\bcpt\b|immigration|international|resume|interview|networking|workshop|hackathon|startup|founder|entrepreneur|\bai\b|career|job fair", re.I)
 
 
-def ics_other(all_text: str, cfg: dict, exclude: list, today=None, days: int = 45, limit: int = 5) -> list:
+def ics_other(all_text: str, cfg: dict, exclude: list, today=None, days: int = 45, limit: int = 5, mine_text: str = "") -> list:
     """Other upcoming events on the calendar that match your interests (visas, workshops, AI, startups...)."""
     today = today or datetime.now(NY).date()
     lo = datetime.combine(today, datetime.min.time()).replace(tzinfo=NY)
     hi = lo + timedelta(days=days)
     taken = {(s["company"].lower(), s["start_dt"].isoformat()) for s in exclude}
+    mine = {(e["title"].lower(), e["start"].isoformat()) for e in parse_ics(mine_text)} if mine_text else set()
     out = []
     for e in parse_ics(all_text):
         if not (lo <= e["end"] and e["start"] <= hi) or (e["title"].lower(), e["start"].isoformat()) in taken:
             continue
         if RELEVANT.search(e["title"]):
-            out.append({"title": e["title"], "start_dt": e["start"], "place": e.get("place", ""), "clashes": luma.clashes(e["start"], e["end"], cfg)})
+            out.append({"title": e["title"], "start_dt": e["start"], "place": e.get("place", ""), "clashes": luma.clashes(e["start"], e["end"], cfg),
+                        "registered": (e["title"].lower(), e["start"].isoformat()) in mine})
     out.sort(key=lambda s: s["start_dt"])
     return out[:limit]
 
@@ -289,9 +300,9 @@ def format_ics_sessions(sessions: list, others: list = ()) -> str:
     if others:
         lines.append("\nAlso on the calendar and relevant to you:")
         for o in others:
-            lines.append(f"• {o['title']}\n  {o['start_dt'].strftime('%a %b %d, %-I:%M %p')}" + (f" · {o['place']}" if o["place"] else "") +
+            lines.append(f"• {o['title']}{'  ✅ you are registered' if o.get('registered') else ''}\n  {o['start_dt'].strftime('%a %b %d, %-I:%M %p')}" + (f" · {o['place']}" if o["place"] else "") +
                          (f"\n  ⚠️ clashes with {', '.join(o['clashes'])}" if o["clashes"] else ""))
-    lines.append("\nFrom Campus Groups' own calendar feed. Check Campus Groups for changes. I never RSVP for you.")
+    lines.append("\nFrom Campus Groups' own calendar feeds. Company info sessions (for example the Technical Programs ones) are often not in these feeds, so they can be missing: the Career Digest email lists them. Check Campus Groups for changes. I never RSVP for you.")
     return "\n".join(lines)[:3900]
 
 
@@ -317,5 +328,5 @@ async def build_campus_ics(all_url: str, mine_url: str, get_text, cfg: dict, tie
         if s2 != 200 or "BEGIN:VCALENDAR" not in (mine_text or ""):
             mine_text = ""
     sessions = ics_sessions(all_text, mine_text, cfg, tiers, today)
-    text = format_ics_sessions(sessions, ics_other(all_text, cfg, sessions, today))
+    text = format_ics_sessions(sessions, ics_other(all_text, cfg, sessions, today, mine_text=mine_text))
     return text + (f"\n({failures} of your calendar links could not be read)" if failures else "")
