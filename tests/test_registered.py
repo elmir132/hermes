@@ -12,8 +12,8 @@ NOW = datetime(2026, 10, 15, 12, tzinfo=timezone.utc)
 CFG = {"browser_file": "/nonexistent/b.json", "sponsors": [],
        "busy_weekly": [{"name": "evening class", "days": [0, 2], "from": "19:30", "to": "20:45"}],
        "registered": [{"name": "AI For NYC Hackathon", "start": "2026-10-19T18:30", "end": "2026-10-19T22:00", "place": "Queens", "status": "going"},
-                      {"name": "Big Weekend Hackathon", "start": "2026-10-24T08:30", "end": "2026-10-25T20:00", "place": "Apella", "status": "going"},
-                      {"name": "Deal Flow VC Hackathon", "start": "2026-10-24T09:00", "end": "2026-10-24T18:00", "place": "Betaworks", "status": "invited"}]}
+                      {"name": "Big Weekend Hackathon", "start": "2026-10-24T08:30", "end": "2026-10-25T20:00", "place": "Venue A", "status": "going"},
+                      {"name": "Weekend VC Hackathon", "start": "2026-10-24T09:00", "end": "2026-10-24T18:00", "place": "Venue B", "status": "invited"}]}
 
 
 def run(c):
@@ -55,7 +55,7 @@ class MineViewTests(unittest.TestCase):
         self.assertLess(text.index("AI For NYC"), text.index("Big Weekend"))                  # soonest first
         self.assertIn("Mon Oct 19, 6:30 PM to 10:00 PM · Queens", text)
         self.assertIn("clashes with evening class", text)                                    # 7:30 PM class during the hackathon
-        self.assertIn("Deal Flow VC Hackathon (invited, not registered)", text)               # overlaps the big weekend event
+        self.assertIn("Weekend VC Hackathon (invited, not registered)", text)               # overlaps the big weekend event
         self.assertIn("invited, not registered", text)
 
     def test_past_events_drop_off_and_an_empty_list_is_explained(self):
