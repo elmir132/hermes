@@ -14,6 +14,10 @@ Everything runs against free-tier API quotas, which drove most of the interestin
 
 ## Architecture
 
+![Hermes architecture: Telegram to a router that uses a quota-aware model fallback chain, RAG memory in SQLite, and tools](docs/architecture.png)
+
+The same structure as text:
+
 ```
 Telegram (aiogram)
         │
