@@ -1,7 +1,7 @@
 """Daily job watcher for public job-board feeds and first-page Google/Apple search results.
 
 Greenhouse, Lever and Ashby expose public job feeds. Google and Apple are read from their public search pages
-using a separate HTML-only fetch; Bloomberg and Two Sigma (Avature search pages) and D. E. Shaw (JSON embedded in its careers page) are read the same way. No login or model call is used by the watcher; plain rules match titles and
+using a separate HTML-only fetch; Bloomberg and Two Sigma (Avature search pages) and D. E. Shaw (JSON embedded in its careers page) are read the same way; Oracle Recruiting sites (Oracle, American Express) through their public job API. No login or model call is used by the watcher; plain rules match titles and
 locations, so posting text cannot steer it. It never applies to anything. Search-page roles are only listings:
 their descriptions, pay, visa terms and experience requirements are not checked.
 """
@@ -11,7 +11,7 @@ import json
 import re
 import sqlite3
 from html.parser import HTMLParser
-from urllib.parse import unquote, urlencode, urljoin, urlsplit, urlunsplit
+from urllib.parse import quote, unquote, urlencode, urljoin, urlsplit, urlunsplit
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -42,6 +42,9 @@ SEARCH_PAGE_LIMIT = 20
 AVATURE_PAGE_LIMIT = 40      # Bloomberg is about 30 pages of 12 roles, Two Sigma about 10 pages of 10
 PAGE_DELAY = 1.0             # seconds between page requests to one careers site
 DESHAW_URL = "https://www.deshaw.com/careers"
+ORACLE_QUERIES = ["software engineer", "machine learning"]
+ORACLE_PAGE = 100           # Oracle Recruiting returns at most 100 per request
+ORACLE_PAGES = 3
 CONCURRENCY = 4
 BROWSER_FILE = Path(__file__).parent / "browser_jobs.json"      # written daily by browser_reader.py on the Mac
 BROWSER_STALE_DAYS = 3
@@ -462,6 +465,49 @@ async def fetch_deshaw(company: dict, get_html):
     return found, (None if found else "no job list found on the careers page")
 
 
+def oracle_jobs(company: dict, items: list) -> list:
+    """Oracle Recruiting (Oracle Cloud HCM) requisitions in the common job shape."""
+    host, site, name = company["host"], company["site"], company.get("name", "")
+    out = []
+    for raw in items if isinstance(items, list) else []:
+        rid, title = str(raw.get("Id") or ""), _clean(raw.get("Title") or "")
+        if not rid.isdigit() or not title:
+            continue
+        places = [raw.get("PrimaryLocation") or ""] + [s.get("Name", "") for s in raw.get("secondaryLocations") or [] if isinstance(s, dict)]
+        places = list(dict.fromkeys(p for p in places if p))
+        text = _clean(" ".join(str(raw.get(k) or "") for k in ("ShortDescriptionStr", "ExternalResponsibilitiesStr", "ExternalQualificationsStr")))
+        employment = " ".join(str(raw.get(k) or "") for k in ("JobSchedule", "WorkerType", "ContractType", "JobType"))
+        out.append({"key": f"orc:{name}:{rid}", "company": name, "title": title, "location": "; ".join(places),
+                    "location_verified": bool(places), "remote": "remote" in str(raw.get("WorkplaceType") or "").lower(),
+                    "url": f"https://{host}/hcmUI/CandidateExperience/en/sites/{site}/job/{rid}",
+                    "published": raw.get("PostedDate") or "", "text": text, "employment": employment,
+                    "pay": pay_from_text(text), "details_checked": bool(text)})
+    return out
+
+
+async def fetch_oracle(company: dict, get_json):
+    """Keyword searches on the public Oracle Recruiting API, up to three pages each; New York is filtered later."""
+    base = f"https://{company['host']}/hcmRestApi/resources/latest/recruitingCEJobRequisitions"
+    found, seen, errors = [], set(), []
+    for query in company.get("queries", ORACLE_QUERIES):
+        for page in range(ORACLE_PAGES):
+            finder = (f"findReqs;siteNumber={company['site']},limit={ORACLE_PAGE},offset={page * ORACLE_PAGE},"
+                      f'keyword="{query}"')
+            status, data = await get_json(f"{base}?onlyData=true&expand=requisitionList.secondaryLocations&finder={quote(finder, safe='=;,')}")
+            if status != 200 or not isinstance(data, dict):
+                errors.append(f"HTTP {status}")
+                break
+            block = (data.get("items") or [{}])[0]
+            batch = block.get("requisitionList") or []
+            for job in oracle_jobs(company, batch):
+                if job["key"] not in seen:
+                    seen.add(job["key"])
+                    found.append(job)
+            if len(batch) < ORACLE_PAGE or (page + 1) * ORACLE_PAGE >= (block.get("TotalJobsCount") or 0):
+                break
+    return found, ("; ".join(dict.fromkeys(errors)) if errors else None)
+
+
 def browser_jobs(company: dict, cfg: dict, now=None, path=None):
     """Reads browser_jobs.json (made by browser_reader.py). Returns (jobs, error_or_None)."""
     path = Path(path or company.get("file") or BROWSER_FILE)
@@ -699,6 +745,8 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 found, err = await fetch_amazon(dict(company, name=name), get_json)
             elif provider == "workday":
                 found, err = await fetch_workday(dict(company, name=name), get_json, now)
+            elif provider == "oracle":
+                found, err = await fetch_oracle(dict(company, name=name), get_json)
             elif provider in ("avature", "deshaw"):
                 if get_html is None:
                     found, err = [], "HTML reader is not configured"

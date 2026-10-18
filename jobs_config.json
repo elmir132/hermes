@@ -828,6 +828,98 @@
    "tier": 1
   },
   {
+   "name": "DoorDash",
+   "provider": "greenhouse",
+   "slug": "doordashusa",
+   "tier": 3
+  },
+  {
+   "name": "Five Rings",
+   "provider": "greenhouse",
+   "slug": "fiveringsllc",
+   "tier": 1
+  },
+  {
+   "name": "XTX Markets",
+   "provider": "greenhouse",
+   "slug": "xtxmarketstechnologies",
+   "tier": 1
+  },
+  {
+   "name": "Schonfeld",
+   "provider": "greenhouse",
+   "slug": "schonfeld",
+   "tier": 2
+  },
+  {
+   "name": "Bridgewater",
+   "provider": "greenhouse",
+   "slug": "bridgewater89",
+   "tier": 2
+  },
+  {
+   "name": "AQR",
+   "provider": "greenhouse",
+   "slug": "aqr",
+   "tier": 2
+  },
+  {
+   "name": "ExodusPoint",
+   "provider": "greenhouse",
+   "slug": "exoduspoint",
+   "tier": 2
+  },
+  {
+   "name": "Bank of America",
+   "provider": "workday",
+   "host": "ghr.wd1.myworkdayjobs.com",
+   "tenant": "ghr",
+   "site": "Lateral-US",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
+   "name": "Citi",
+   "provider": "workday",
+   "host": "citi.wd5.myworkdayjobs.com",
+   "tenant": "citi",
+   "site": "2",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
+   "name": "BlackRock",
+   "provider": "workday",
+   "host": "blackrock.wd1.myworkdayjobs.com",
+   "tenant": "blackrock",
+   "site": "BlackRock_Professional",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
+   "name": "Visa",
+   "provider": "workday",
+   "host": "visa.wd5.myworkdayjobs.com",
+   "tenant": "visa",
+   "site": "Visa",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
+   "name": "American Express",
+   "provider": "oracle",
+   "host": "egug.fa.us2.oraclecloud.com",
+   "site": "CX_1",
+   "tier": 3
+  },
+  {
+   "name": "Oracle",
+   "provider": "oracle",
+   "host": "eeho.fa.us2.oraclecloud.com",
+   "site": "CX_45001",
+   "tier": 3
+  },
+  {
    "name": "Hacker News: Who is hiring",
    "provider": "hn",
    "tier": 3
