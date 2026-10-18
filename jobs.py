@@ -1,7 +1,7 @@
 """Daily job watcher for public job-board feeds and first-page Google/Apple search results.
 
 Greenhouse, Lever and Ashby expose public job feeds. Google and Apple are read from their public search pages
-using a separate HTML-only fetch. No login or model call is used by the watcher; plain rules match titles and
+using a separate HTML-only fetch; Bloomberg and Two Sigma (Avature search pages) and D. E. Shaw (JSON embedded in its careers page) are read the same way. No login or model call is used by the watcher; plain rules match titles and
 locations, so posting text cannot steer it. It never applies to anything. Search-page roles are only listings:
 their descriptions, pay, visa terms and experience requirements are not checked.
 """
@@ -39,6 +39,9 @@ GOOGLE_QUERIES = ["software engineer", "machine learning engineer", "new grad so
 APPLE_SEARCH = "https://jobs.apple.com/en-us/search"
 APPLE_QUERIES = ["software engineer", "machine learning engineer", "new grad software engineer"]
 SEARCH_PAGE_LIMIT = 20
+AVATURE_PAGE_LIMIT = 40      # Bloomberg is about 30 pages of 12 roles, Two Sigma about 10 pages of 10
+PAGE_DELAY = 1.0             # seconds between page requests to one careers site
+DESHAW_URL = "https://www.deshaw.com/careers"
 CONCURRENCY = 4
 BROWSER_FILE = Path(__file__).parent / "browser_jobs.json"      # written daily by browser_reader.py on the Mac
 BROWSER_STALE_DAYS = 3
@@ -371,6 +374,94 @@ async def fetch_apple(company: dict, get_html, cfg: dict):
 
 
 # ---------- jobs read by a real browser on the Mac (Meta, Microsoft, Netflix) ----------
+def _clean(fragment: str) -> str:
+    return re.sub(r"\s+", " ", html_lib.unescape(re.sub(r"<[^>]+>", " ", fragment or ""))).strip()
+
+
+def parse_avature_html(page: str, company: str, host: str) -> list:
+    """Jobs from an Avature search results page (Bloomberg, Two Sigma). Only links on the careers host itself are kept.
+    Bloomberg shows the location in `list-item-location`; Two Sigma shows location, team and level as plain spans."""
+    out = []
+    for block in re.findall(r'<article class="article article--result".*?</article>', page if isinstance(page, str) else "", re.S):
+        link = re.search(r'<a class="link" href="([^"]+/JobDetail/[^"]+)"[^>]*>(.*?)</a>', block, re.S)
+        if not link:
+            continue
+        url = html_lib.unescape(link.group(1))
+        if urlsplit(url).hostname != host:
+            continue
+        title = _clean(link.group(2))
+        loc = re.search(r'class="list-item-location"[^>]*>(.*?)</span>', block, re.S)
+        spans = [_clean(x) for x in re.findall(r'class="paragraph_inner-span"[^>]*>(.*?)</span>', block, re.S)]
+        spans = [x for x in spans if x]
+        location, extra = (_clean(loc.group(1)), []) if loc else ((spans[0], spans[1:]) if spans else ("", []))
+        job_id = re.search(r"/(\d+)/?$", urlsplit(url).path)
+        if not title:
+            continue
+        out.append({"key": f"avature:{company}:{job_id.group(1) if job_id else url}", "company": company, "title": title,
+                    "location": location, "location_verified": bool(location), "remote": False, "url": url, "published": "",
+                    "text": "", "employment": " ".join(extra), "pay": None, "details_checked": False})
+    return out
+
+
+async def fetch_avature(company: dict, get_html):
+    """Read the search results page by page (politely, with a pause), until a page adds nothing new."""
+    search, name = company["search"], company.get("name", "")
+    host = urlsplit(search).hostname
+    found, seen, offset, step = [], set(), 0, 0
+    for page_number in range(AVATURE_PAGE_LIMIT):
+        if page_number:
+            await asyncio.sleep(PAGE_DELAY)
+        status, page = await get_html(search if offset == 0 else f"{search}?jobOffset={offset}")
+        if status != 200:
+            return found, f"HTTP {status}" + (f" on page {page_number + 1}" if page_number else "")
+        jobs_on_page = parse_avature_html(page, name, host)
+        new = [j for j in jobs_on_page if j["key"] not in seen]
+        if not new:
+            break
+        step = step or len(jobs_on_page)
+        for j in new:
+            seen.add(j["key"])
+            found.append(j)
+        offset += step
+    else:
+        return found, f"stopped after {AVATURE_PAGE_LIMIT} pages (the list is longer)"
+    return found, None
+
+
+def parse_deshaw_html(page: str, company: str = "D. E. Shaw") -> list:
+    """D. E. Shaw's careers page embeds its public job list as JSON (`regularJobs`). Internal listings are not read."""
+    m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', page if isinstance(page, str) else "", re.S)
+    if not m:
+        return []
+    try:
+        records = json.loads(m.group(1))["props"]["pageProps"]["regularJobs"]
+    except (ValueError, KeyError, TypeError):
+        return []
+    out = []
+    for rec in records if isinstance(records, list) else []:
+        data = rec.get("data") or {}
+        title = _clean(rec.get("displayName") or data.get("displayName") or "")
+        slug = data.get("jobUrl") or ""
+        if not title or not re.fullmatch(r"[A-Za-z0-9-]+", slug) or data.get("activeOnJobsListing") is False:
+            continue
+        offices = [o.get("name", "") for o in rec.get("office") or [] if isinstance(o, dict)]
+        desc = data.get("jobDescription") or {}
+        text = _clean(" ".join(str(desc.get(k) or "") for k in ("websiteDescription", "responsibilities", "peopleWeAreLookingForStr")))
+        out.append({"key": f"deshaw:{rec.get('id', slug)}", "company": company, "title": title,
+                    "location": "; ".join(o for o in offices if o), "location_verified": bool(offices),
+                    "remote": any(o.lower().startswith("off-site") for o in offices), "url": f"{DESHAW_URL}/{slug}",
+                    "published": "", "text": text, "employment": "", "pay": pay_from_text(text), "details_checked": True})
+    return out
+
+
+async def fetch_deshaw(company: dict, get_html):
+    status, page = await get_html(DESHAW_URL)
+    if status != 200:
+        return [], f"HTTP {status}"
+    found = parse_deshaw_html(page, company.get("name", "D. E. Shaw"))
+    return found, (None if found else "no job list found on the careers page")
+
+
 def browser_jobs(company: dict, cfg: dict, now=None, path=None):
     """Reads browser_jobs.json (made by browser_reader.py). Returns (jobs, error_or_None)."""
     path = Path(path or company.get("file") or BROWSER_FILE)
@@ -608,6 +699,13 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 found, err = await fetch_amazon(dict(company, name=name), get_json)
             elif provider == "workday":
                 found, err = await fetch_workday(dict(company, name=name), get_json, now)
+            elif provider in ("avature", "deshaw"):
+                if get_html is None:
+                    found, err = [], "HTML reader is not configured"
+                elif provider == "avature":
+                    found, err = await fetch_avature(dict(company, name=name), get_html)
+                else:
+                    found, err = await fetch_deshaw(dict(company, name=name), get_html)
             elif provider in ("google", "apple"):
                 if get_html is None:
                     found, err = [], "HTML reader is not configured"

@@ -324,13 +324,15 @@ class ConfigTests(unittest.TestCase):
     def test_every_company_uses_a_known_provider_and_has_what_it_needs(self):
         names = set()
         for c in CFG["companies"]:
-            self.assertIn(c["provider"], ("greenhouse", "lever", "ashby", "workday", "amazon", "google", "apple", "browser", "hn"))
+            self.assertIn(c["provider"], ("greenhouse", "lever", "ashby", "workday", "amazon", "google", "apple", "browser", "hn", "avature", "deshaw"))
             self.assertTrue(c["name"])
             self.assertNotIn(c["name"], names)
             names.add(c["name"])
             if c["provider"] == "workday":
                 self.assertTrue(c["host"].endswith(".myworkdayjobs.com") and c["tenant"] and c["site"])
-            elif c["provider"] not in ("amazon", "google", "apple", "browser", "hn"):
+            elif c["provider"] == "avature":
+                self.assertTrue(c["search"].startswith("https://"))          # the readers only follow links on this host
+            elif c["provider"] not in ("amazon", "google", "apple", "browser", "hn", "deshaw"):
                 self.assertTrue(c["slug"])
 
 

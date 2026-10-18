@@ -811,6 +811,23 @@
    "tier": 4
   },
   {
+   "name": "Bloomberg",
+   "provider": "avature",
+   "search": "https://bloomberg.avature.net/careers/SearchJobs",
+   "tier": 2
+  },
+  {
+   "name": "Two Sigma",
+   "provider": "avature",
+   "search": "https://careers.twosigma.com/careers/OpenRoles",
+   "tier": 1
+  },
+  {
+   "name": "D. E. Shaw",
+   "provider": "deshaw",
+   "tier": 1
+  },
+  {
    "name": "Hacker News: Who is hiring",
    "provider": "hn",
    "tier": 3
