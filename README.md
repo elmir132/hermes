@@ -1,6 +1,6 @@
 # Hermes
 
-A production Telegram AI assistant with long-term memory, built on retrieval-augmented generation over a local SQLite vector store.
+A personal Telegram AI assistant with long-term memory, built on retrieval-augmented generation over a local SQLite vector store.
 
 Runs continuously on a Linux server under `systemd` as a personal assistant (access is restricted to a single allow-listed Telegram user).
 
@@ -13,6 +13,10 @@ Most chatbots forget everything between sessions. Hermes remembers: every messag
 Everything runs against free-tier API quotas, which drove most of the interesting engineering — model fallback chains, quota-aware routing, and a local vector store instead of a hosted vector database.
 
 ## Architecture
+
+![Hermes architecture: Telegram to a router that uses a quota-aware model fallback chain, RAG memory in SQLite, and tools](docs/architecture.png)
+
+The same structure as text:
 
 ```
 Telegram (aiogram)
