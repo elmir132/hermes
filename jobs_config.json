@@ -721,6 +721,96 @@
    "tier": 1
   },
   {
+   "name": "DRW",
+   "provider": "greenhouse",
+   "slug": "drweng",
+   "tier": 2
+  },
+  {
+   "name": "Squarepoint Capital",
+   "provider": "greenhouse",
+   "slug": "squarepointcapital",
+   "tier": 2
+  },
+  {
+   "name": "Rogo",
+   "provider": "ashby",
+   "slug": "rogo",
+   "tier": 3
+  },
+  {
+   "name": "Vercel",
+   "provider": "greenhouse",
+   "slug": "vercel",
+   "tier": 3
+  },
+  {
+   "name": "CoreWeave",
+   "provider": "greenhouse",
+   "slug": "coreweave",
+   "tier": 3
+  },
+  {
+   "name": "Glean",
+   "provider": "greenhouse",
+   "slug": "gleanwork",
+   "tier": 3
+  },
+  {
+   "name": "Chime",
+   "provider": "greenhouse",
+   "slug": "chime",
+   "tier": 3
+  },
+  {
+   "name": "Mercor",
+   "provider": "ashby",
+   "slug": "mercor",
+   "tier": 4
+  },
+  {
+   "name": "Snorkel AI",
+   "provider": "greenhouse",
+   "slug": "snorkelai",
+   "tier": 4
+  },
+  {
+   "name": "LangChain",
+   "provider": "ashby",
+   "slug": "langchain",
+   "tier": 4
+  },
+  {
+   "name": "Gusto",
+   "provider": "greenhouse",
+   "slug": "gusto",
+   "tier": 4
+  },
+  {
+   "name": "Mercury",
+   "provider": "greenhouse",
+   "slug": "mercury",
+   "tier": 4
+  },
+  {
+   "name": "Squarespace",
+   "provider": "greenhouse",
+   "slug": "squarespace",
+   "tier": 4
+  },
+  {
+   "name": "ClickHouse",
+   "provider": "ashby",
+   "slug": "clickhouse",
+   "tier": 4
+  },
+  {
+   "name": "Asana",
+   "provider": "greenhouse",
+   "slug": "asana",
+   "tier": 4
+  },
+  {
    "name": "Hacker News: Who is hiring",
    "provider": "hn",
    "tier": 3

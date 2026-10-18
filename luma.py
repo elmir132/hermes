@@ -142,7 +142,10 @@ def browser_events(cfg: dict, now=None, path=None):
         return [], ["no Cerebral Valley list yet (run browser_reader.py on the Mac)"]
     notes, out = [], []
     try:
-        age = (datetime.now(timezone.utc) - datetime.fromisoformat(data.get("fetched_at", "").replace("Z", "+00:00"))).days
+        reference = now or datetime.now(timezone.utc)                 # use the caller's clock so the age is testable
+        if reference.tzinfo is None:
+            reference = reference.replace(tzinfo=timezone.utc)
+        age = (reference - datetime.fromisoformat(data.get("fetched_at", "").replace("Z", "+00:00"))).days
         if age >= 3:
             notes.append(f"the Cerebral Valley list is {age} days old")
     except ValueError:
