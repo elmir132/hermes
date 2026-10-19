@@ -1017,6 +1017,60 @@
    "search": "engineer"
   },
   {
+   "name": "Intel",
+   "provider": "workday",
+   "host": "intel.wd1.myworkdayjobs.com",
+   "tenant": "intel",
+   "site": "External",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
+   "name": "Zillow",
+   "provider": "workday",
+   "host": "zillow.wd5.myworkdayjobs.com",
+   "tenant": "zillow",
+   "site": "Zillow_Group_External",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
+   "name": "CrowdStrike",
+   "provider": "workday",
+   "host": "crowdstrike.wd5.myworkdayjobs.com",
+   "tenant": "crowdstrike",
+   "site": "crowdstrikecareers",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
+   "name": "Vanguard",
+   "provider": "workday",
+   "host": "vanguard.wd5.myworkdayjobs.com",
+   "tenant": "vanguard",
+   "site": "vanguard_external",
+   "tier": 4,
+   "search": "engineer"
+  },
+  {
+   "name": "AMD",
+   "provider": "jibe",
+   "host": "careers.amd.com",
+   "tier": 3
+  },
+  {
+   "name": "GitHub",
+   "provider": "jibe",
+   "host": "www.github.careers",
+   "tier": 2
+  },
+  {
+   "name": "DocuSign",
+   "provider": "jibe",
+   "host": "careers.docusign.com",
+   "tier": 3
+  },
+  {
    "name": "Hacker News: Who is hiring",
    "provider": "hn",
    "tier": 3
@@ -1175,7 +1229,28 @@
   "new york city",
   "nyc",
   "brooklyn",
-  "manhattan"
+  "manhattan",
+  "san francisco",
+  "south san francisco",
+  "san francisco bay area",
+  "bay area",
+  "oakland",
+  "berkeley",
+  "emeryville",
+  "palo alto",
+  "mountain view",
+  "menlo park",
+  "sunnyvale",
+  "santa clara",
+  "san jose",
+  "cupertino",
+  "redwood city",
+  "san mateo",
+  "foster city",
+  "burlingame",
+  "san bruno",
+  "milpitas",
+  "fremont"
  ],
  "remote_regions": [
   "united states",
@@ -1218,7 +1293,9 @@
   "zurich",
   "seoul",
   "korea",
-  "taiwan"
+  "taiwan",
+  "costa rica",
+  "san josé"
  ],
  "max_per_message": 12,
  "exclude_employment": [

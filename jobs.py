@@ -1,4 +1,4 @@
-"""Daily job watcher for public job-board feeds and first-page Google/Apple search results.
+"""Daily job watcher (New York first, then the San Francisco Bay Area and US remote) for public job-board feeds and first-page Google/Apple search results.
 
 Greenhouse, Lever and Ashby expose public job feeds. Google and Apple are read from their public search pages
 using a separate HTML-only fetch; Bloomberg and Two Sigma (Avature search pages) and D. E. Shaw (JSON embedded in its careers page) are read the same way; Oracle Recruiting sites (Oracle, American Express), TikTok and Atlassian through the public job APIs their careers pages use. No login or model call is used by the watcher; plain rules match titles and
@@ -46,9 +46,11 @@ ORACLE_QUERIES = ["software engineer", "machine learning"]
 ORACLE_PAGE = 100           # Oracle Recruiting returns at most 100 per request
 ORACLE_PAGES = 3
 TIKTOK_SEARCH = "https://api.lifeattiktok.com/api/v1/public/supplier/search/job/posts"
-TIKTOK_NYC = "CT_114"        # TikTok's own location code for New York
+TIKTOK_NYC = "CT_114"        # TikTok's own location codes: New York, and San Jose for the Bay Area
+TIKTOK_PLACES = ["CT_114", "CT_1103355"]
 TIKTOK_QUERIES = ["engineer", "machine learning", "data scientist"]
 ATLASSIAN_LISTINGS = "https://www.atlassian.com/endpoint/careers/listings"
+JIBE_QUERIES = ["software engineer", "machine learning"]
 CONCURRENCY = 4
 BROWSER_FILE = Path(__file__).parent / "browser_jobs.json"      # written daily by browser_reader.py on the Mac
 BROWSER_STALE_DAYS = 3
@@ -57,6 +59,15 @@ HN_ITEM = "https://hn.algolia.com/api/v1/items/{id}"
 HN_TITLE_WORDS = ("engineer", "developer", "scientist", "researcher", "swe", "sde", "programmer", "architect", "devops", "sre", "mts", "technical staff")
 WORKDAY_PAGE = 20
 WORKDAY_PAGES = 5            # at most 100 roles per company and run
+WORKDAY_EXTRA_PAGES = 2      # San Francisco Bay Area and remote filters: at most 40 more roles per filter
+BAY_AREA = ("san francisco", "south san francisco", "oakland", "berkeley", "emeryville", "palo alto", "mountain view", "menlo park",
+            "sunnyvale", "santa clara", "san jose", "cupertino", "redwood city", "san mateo", "foster city", "burlingame", "san bruno",
+            "milpitas", "fremont", "bay area")
+_EXTRA_PLACE = re.compile(r"\b(" + "|".join(BAY_AREA) + r")\b|\bremote\b|\bvirtual\b|work from home", re.I)
+AMAZON_LOCATIONS = ["New York, New York, USA", "San Francisco, California, USA"]
+GOOGLE_LOCATIONS = ["New York, NY, USA", "San Francisco, CA, USA"]
+APPLE_LOCATIONS = {"new-york-city-NYC": "New York City, NY", "san-francisco-bay-area-SFMETRO": "San Francisco Bay Area, CA",
+                   "santa-clara-valley-cupertino-SCV": "Santa Clara Valley (Cupertino), CA"}
 
 
 def load_config(path=CONFIG_PATH) -> dict:
@@ -159,21 +170,30 @@ def workday_age_days(text: str):
     return int(m.group(1)) if m else None
 
 
-def _facet_ids(node, parent=None, found=None):
-    """Collect (facet name, id) for every New York entry in Workday's filter list."""
+def _is_new_york(descriptor: str) -> bool:
+    return descriptor.lower().startswith(("us, ny, new york", "new york"))
+
+
+def _is_extra_place(descriptor: str) -> bool:
+    """A San Francisco Bay Area or remote filter entry. Non-US remote roles are dropped later by the location rules."""
+    return bool(_EXTRA_PLACE.search(descriptor)) and not _is_new_york(descriptor)
+
+
+def _facet_ids(node, parent=None, found=None, match=_is_new_york):
+    """Collect (facet name, id) for every matching entry in Workday's filter list (New York by default)."""
     found = {} if found is None else found
     if isinstance(node, dict):
-        if str(node.get("descriptor", "")).lower().startswith(("us, ny, new york", "new york")) and "id" in node and parent:
+        if match(str(node.get("descriptor", ""))) and "id" in node and parent:
             found.setdefault(parent, []).append(node["id"])
         for key, value in node.items():
-            _facet_ids(value, node.get("facetParameter", parent) if key == "values" else parent, found)
+            _facet_ids(value, node.get("facetParameter", parent) if key == "values" else parent, found, match)
     elif isinstance(node, list):
         for item in node:
-            _facet_ids(item, parent, found)
+            _facet_ids(item, parent, found, match)
     return found
 
 
-def workday_jobs(company: dict, postings: list, now=None) -> list:
+def workday_jobs(company: dict, postings: list, now=None, label: str = "New York") -> list:
     host, site = company["host"], company["site"]
     now = now or datetime.now(timezone.utc)
     out = []
@@ -183,9 +203,12 @@ def workday_jobs(company: dict, postings: list, now=None) -> list:
             continue
         days = workday_age_days(p.get("postedOn", ""))
         where = p.get("locationsText", "")
-        if re.fullmatch(r"\d+ locations?", where.strip(), re.I) or not where:
-            where = f"New York (one of {where.strip() or 'several locations'})"      # we asked Workday for New York roles only
-        out.append({"key": f"wd:{company['name']}:{path}", "company": company["name"], "title": p["title"].strip(), "location": where, "remote": False,
+        unknown = bool(re.fullmatch(r"\d+ locations?", where.strip(), re.I) or not where)
+        if unknown:
+            where = f"{label} (one of {where.strip() or 'several locations'})"      # what we asked Workday's filter for
+        out.append({"key": f"wd:{company['name']}:{path}", "company": company["name"], "title": p["title"].strip(), "location": where,
+                    "remote": bool(re.search(r"\bremote\b|virtual|work from home", where, re.I)),
+                    **({"location_verified": False} if unknown and label != "New York" else {}),
                     "url": f"https://{host}/{site}{path}", "published": (now - timedelta(days=days)).isoformat() if days is not None else "",
                     "text": "", "employment": "", "pay": None, "wd_path": path})
     return out
@@ -197,33 +220,48 @@ async def fetch_workday(company: dict, get_json, now=None):
     status, first = await get_json(base + "/jobs", {"appliedFacets": {}, "limit": 1, "offset": 0, "searchText": ""})
     if status != 200 or not isinstance(first, dict):
         return [], f"HTTP {status}"
-    ids = _facet_ids(first.get("facets", []))
-    if not ids:
-        return [], "no New York filter found"
-    postings = []
-    for page in range(WORKDAY_PAGES):
-        status, data = await get_json(base + "/jobs", {"appliedFacets": ids, "limit": WORKDAY_PAGE, "offset": page * WORKDAY_PAGE,
-                                                       "searchText": company.get("search", "")})
-        if status != 200 or not isinstance(data, dict):
-            break
-        batch = data.get("jobPostings", [])
-        postings += batch
-        if len(batch) < WORKDAY_PAGE or (page + 1) * WORKDAY_PAGE >= data.get("total", 0):
-            break
-    return workday_jobs(company, postings, now), None
+    facets = first.get("facets", [])
+    ids = _facet_ids(facets)
+    extra = _facet_ids(facets, match=_is_extra_place)
+    if not ids and not extra:
+        return [], "no New York, San Francisco or remote filter found"
+
+    async def pages(applied, limit_pages):
+        got = []
+        for page in range(limit_pages):
+            status, data = await get_json(base + "/jobs", {"appliedFacets": applied, "limit": WORKDAY_PAGE, "offset": page * WORKDAY_PAGE,
+                                                           "searchText": company.get("search", "")})
+            if status != 200 or not isinstance(data, dict):
+                break
+            batch = data.get("jobPostings", [])
+            got += batch
+            if len(batch) < WORKDAY_PAGE or (page + 1) * WORKDAY_PAGE >= data.get("total", 0):
+                break
+        return got
+
+    found, seen = [], set()
+    groups = ([(ids, WORKDAY_PAGES, "New York")] if ids else []) + \
+             [({facet: values}, WORKDAY_EXTRA_PAGES, "San Francisco Bay Area or remote") for facet, values in extra.items()]
+    for applied, limit_pages, label in groups:              # one query per filter group: Workday ANDs different groups
+        for job in workday_jobs(company, await pages(applied, limit_pages), now, label):
+            if job["key"] not in seen:
+                seen.add(job["key"])
+                found.append(job)
+    return found, None
 
 
 async def fetch_amazon(company: dict, get_json):
     jobs_, seen = [], set()
-    for q in company.get("queries", AMAZON_QUERIES):
-        params = urlencode({"base_query": q, "normalized_location[]": "New York, New York, USA", "result_limit": 50, "sort": "recent"})
-        status, payload = await get_json(f"{AMAZON}?{params}")
-        if status != 200:
-            return jobs_, f"HTTP {status}"
-        for j in amazon_jobs(payload, company["name"]):
-            if j["key"] not in seen:
-                seen.add(j["key"])
-                jobs_.append(j)
+    for place in company.get("locations", AMAZON_LOCATIONS):
+        for q in company.get("queries", AMAZON_QUERIES):
+            params = urlencode({"base_query": q, "normalized_location[]": place, "result_limit": 50, "sort": "recent"})
+            status, payload = await get_json(f"{AMAZON}?{params}")
+            if status != 200:
+                return jobs_, f"HTTP {status}"
+            for j in amazon_jobs(payload, company["name"]):
+                if j["key"] not in seen:
+                    seen.add(j["key"])
+                    jobs_.append(j)
     return jobs_, None
 
 
@@ -290,7 +328,7 @@ def _real_apple_title(link: dict) -> str:
     return ""
 
 
-def parse_google_html(page: str, company: str = "Google") -> list:
+def parse_google_html(page: str, company: str = "Google", place: str = "New York, NY") -> list:
     """Parse first-page Google results; normalize relative links and deduplicate tracking URLs."""
     parser = _SearchLinkParser()
     parser.feed(page if isinstance(page, str) else "")
@@ -308,7 +346,7 @@ def parse_google_html(page: str, company: str = "Google") -> list:
         if not title:
             continue
         out.append({"key": f"google:{company}:{url}", "company": company, "title": title,
-                    "location": "New York, NY", "location_verified": False,
+                    "location": place, "location_verified": False,
                     "remote": False, "url": url, "published": "",
                     "text": "", "employment": "", "pay": None, "details_checked": False})
         if len(out) >= SEARCH_PAGE_LIMIT:
@@ -316,7 +354,7 @@ def parse_google_html(page: str, company: str = "Google") -> list:
     return out
 
 
-def parse_apple_html(page: str, company: str = "Apple", cfg: dict = None) -> list:
+def parse_apple_html(page: str, company: str = "Apple", cfg: dict = None, place: str = "New York City, NY") -> list:
     """Keep titled full-time Apple roles and discard generic links and title-level seasonal work."""
     parser = _SearchLinkParser()
     parser.feed(page if isinstance(page, str) else "")
@@ -334,7 +372,7 @@ def parse_apple_html(page: str, company: str = "Apple", cfg: dict = None) -> lis
             continue
         seen.add(url)
         out.append({"key": f"apple:{company}:{url}", "company": company, "title": title,
-                    "location": "New York City, NY", "location_verified": False,
+                    "location": place, "location_verified": False,
                     "remote": False, "url": url, "published": "",
                     "text": "", "employment": "", "pay": None, "details_checked": False})
         if len(out) >= SEARCH_PAGE_LIMIT:
@@ -345,38 +383,40 @@ def parse_apple_html(page: str, company: str = "Apple", cfg: dict = None) -> lis
 async def fetch_google(company: dict, get_html):
     """Read the first server-rendered results page for each query; never request page 2."""
     found, errors, seen = [], [], set()
-    for query in company.get("queries", GOOGLE_QUERIES):
-        params = urlencode({"q": query, "location": "New York, NY, USA"})
-        status, page = await get_html(f"{GOOGLE_SEARCH}?{params}")
-        if status != 200:
-            errors.append(f"HTTP {status}")
-            continue
-        page_jobs = parse_google_html(page, company.get("name", "Google"))
-        if not page_jobs:
-            errors.append("no job links found on first results page")
-        for job in page_jobs:
-            if job["url"] not in seen:
-                seen.add(job["url"])
-                found.append(job)
+    for place in company.get("locations", GOOGLE_LOCATIONS):
+        for query in company.get("queries", GOOGLE_QUERIES):
+            params = urlencode({"q": query, "location": place})
+            status, page = await get_html(f"{GOOGLE_SEARCH}?{params}")
+            if status != 200:
+                errors.append(f"HTTP {status}")
+                continue
+            page_jobs = parse_google_html(page, company.get("name", "Google"), place.rsplit(", USA", 1)[0])
+            if not page_jobs:
+                errors.append("no job links found on first results page")
+            for job in page_jobs:
+                if job["url"] not in seen:
+                    seen.add(job["url"])
+                    found.append(job)
     return found, ("; ".join(errors) if errors else None)
 
 
 async def fetch_apple(company: dict, get_html, cfg: dict):
-    """Read New York Apple search pages and retain relevant titled roles only."""
+    """Read Apple search pages for New York and the Bay Area and retain relevant titled roles only."""
     found, errors, seen = [], [], set()
-    for query in company.get("queries", APPLE_QUERIES):
-        params = urlencode({"location": "new-york-city-NYC", "search": query})
-        status, page = await get_html(f"{APPLE_SEARCH}?{params}")
-        if status != 200:
-            errors.append(f"HTTP {status}")
-            continue
-        page_jobs = parse_apple_html(page, company.get("name", "Apple"), cfg)
-        if not page_jobs:
-            errors.append("no matching titled roles found on results page")
-        for job in page_jobs:
-            if job["url"] not in seen:
-                seen.add(job["url"])
-                found.append(job)
+    for slug, place in company.get("locations", APPLE_LOCATIONS).items():
+        for query in company.get("queries", APPLE_QUERIES):
+            params = urlencode({"location": slug, "search": query})
+            status, page = await get_html(f"{APPLE_SEARCH}?{params}")
+            if status != 200:
+                errors.append(f"HTTP {status}")
+                continue
+            page_jobs = parse_apple_html(page, company.get("name", "Apple"), cfg, place)
+            if not page_jobs:
+                errors.append("no matching titled roles found on results page")
+            for job in page_jobs:
+                if job["url"] not in seen:
+                    seen.add(job["url"])
+                    found.append(job)
     return found, ("; ".join(errors) if errors else None)
 
 
@@ -529,12 +569,12 @@ def tiktok_jobs(posts: list, company: str = "TikTok") -> list:
 
 
 async def fetch_tiktok(company: dict, get_json):
-    """TikTok's public job search (the API its careers site calls), New York only, up to three pages per query."""
+    """TikTok's public job search (the API its careers site calls), New York and San Jose, up to three pages per query."""
     found, seen, errors = [], set(), []
     for query in company.get("queries", TIKTOK_QUERIES):
         for page in range(3):
             body = {"keyword": query, "limit": 100, "offset": page * 100, "job_category_id_list": [],
-                    "location_code_list": [company.get("location_code", TIKTOK_NYC)], "subject_id_list": [],
+                    "location_code_list": company.get("location_codes", TIKTOK_PLACES), "subject_id_list": [],
                     "recruitment_id_list": [], "portal_type": 4, "job_function_id_list": [], "portal_entrance": 1}
             status, data = await get_json(TIKTOK_SEARCH, body, headers={"website-path": "tiktok"})
             block = (data or {}).get("data") if isinstance(data, dict) else None
@@ -571,6 +611,45 @@ async def fetch_atlassian(company: dict, get_json):
     if status != 200 or not isinstance(data, list):
         return [], f"HTTP {status}"
     return atlassian_jobs(data, company.get("name", "Atlassian")), None
+
+
+def jibe_jobs(company: dict, items: list) -> list:
+    """Jobs from a Jibe careers site's public /api/jobs list (AMD, GitHub, DocuSign)."""
+    host, name = company["host"], company.get("name", "")
+    out = []
+    for raw in items if isinstance(items, list) else []:
+        data = raw.get("data") if isinstance(raw, dict) else None
+        if not isinstance(data, dict):
+            continue
+        slug, title = str(data.get("slug") or data.get("req_id") or ""), _clean(data.get("title") or "")
+        if not re.fullmatch(r"[A-Za-z0-9-]+", slug) or not title:
+            continue
+        place = data.get("full_location") or ", ".join(x for x in (data.get("city"), data.get("state"), data.get("country")) if x)
+        text = _clean(" ".join(str(data.get(k) or "") for k in ("description", "qualifications", "responsibilities")))
+        out.append({"key": f"jibe:{name}:{slug}", "company": name, "title": title, "location": place or "",
+                    "location_verified": bool(place), "remote": str(data.get("location_type") or "").upper() == "ANY",
+                    "url": f"https://{host}/jobs/{slug}", "published": data.get("posted_date") or "", "text": text,
+                    "employment": str(data.get("employment_type") or "").replace("_", " "), "pay": pay_from_text(text),
+                    "details_checked": bool(text)})
+    return out
+
+
+async def fetch_jibe(company: dict, get_json):
+    found, seen, errors = [], set(), []
+    for query in company.get("queries", JIBE_QUERIES):
+        for page in range(1, 4):
+            status, data = await get_json(f"https://{company['host']}/api/jobs?{urlencode({'keywords': query, 'page': page, 'limit': 100})}")
+            if status != 200 or not isinstance(data, dict):
+                errors.append(f"HTTP {status}")
+                break
+            batch = data.get("jobs") or []
+            for job in jibe_jobs(company, batch):
+                if job["key"] not in seen:
+                    seen.add(job["key"])
+                    found.append(job)
+            if len(batch) < 100 or page * 100 >= (data.get("totalCount") or 0):
+                break
+    return found, ("; ".join(dict.fromkeys(errors)) if errors else None)
 
 
 def browser_jobs(company: dict, cfg: dict, now=None, path=None):
@@ -656,8 +735,13 @@ def has(text: str, words) -> bool:
 
 def location_ok(location: str, remote: bool, cfg: dict) -> bool:
     text = location.lower()
+    if has(text, cfg.get("home_locations", [])):
+        return True                                           # New York always counts, even next to other cities
     if has(text, cfg.get("locations", [])):
-        return True
+        # other allowed places (the Bay Area) count only in a segment that names no excluded country,
+        # so "Costa Rica, San Jose" is out but "San Francisco; London" is in
+        return any(has(part, cfg.get("locations", [])) and not has(part, cfg.get("exclude_locations", []))
+                   for part in re.split(r"[;|/]|\band\b", text))
     if has(text, cfg.get("exclude_locations", [])):
         return False
     if remote or has(text, ["remote"]):
@@ -810,6 +894,8 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 found, err = await fetch_amazon(dict(company, name=name), get_json)
             elif provider == "workday":
                 found, err = await fetch_workday(dict(company, name=name), get_json, now)
+            elif provider == "jibe":
+                found, err = await fetch_jibe(dict(company, name=name), get_json)
             elif provider == "tiktok":
                 found, err = await fetch_tiktok(dict(company, name=name), get_json)
             elif provider == "atlassian":
@@ -892,7 +978,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             body = page_text(page) if status == 200 and isinstance(page, str) else ""
             if len(body) > 500:
                 job["text"], job["details_checked"] = body, True
-                if "new york" in body.lower():
+                if "new york" in body.lower() or any(city in body.lower() for city in BAY_AREA):
                     job["location_verified"] = True
         job["pay"] = job.get("pay") or pay_from_text(job["text"])
         if not pay_ok(job["pay"], cfg):

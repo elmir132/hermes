@@ -129,8 +129,16 @@ class LocationTests(unittest.TestCase):
             self.assertTrue(self.ok(loc), loc)
 
     def test_other_cities_do_not(self):
-        for loc in ["Austin, TX", "San Francisco, CA", "London, UK", "Remote - Europe", "Bangalore, India"]:
+        for loc in ["Austin, TX", "London, UK", "Remote - Europe", "Bangalore, India", "Costa Rica, San Jose", "Seattle, WA"]:
             self.assertFalse(self.ok(loc), loc)
+
+    def test_the_san_francisco_bay_area_matches_but_scores_below_new_york(self):
+        for loc in ["San Francisco, CA", "Mountain View, CA", "US, California, Santa Clara", "San Jose, CA"]:
+            self.assertTrue(self.ok(loc), loc)
+        base = {"title": "Software Engineer", "remote": False, "employment": "", "published": "", "tier": 0}
+        ny = jobs.score_job(dict(base, location="New York, NY"), CFG)[0]
+        sf = jobs.score_job(dict(base, location="San Francisco, CA"), CFG)[0]
+        self.assertGreater(ny, sf)                               # New York stays first
 
     def test_remote_in_the_us_matches(self):
         self.assertTrue(self.ok("Remote - US"))
@@ -324,12 +332,14 @@ class ConfigTests(unittest.TestCase):
     def test_every_company_uses_a_known_provider_and_has_what_it_needs(self):
         names = set()
         for c in CFG["companies"]:
-            self.assertIn(c["provider"], ("greenhouse", "lever", "ashby", "workday", "amazon", "google", "apple", "browser", "hn", "avature", "deshaw", "oracle", "tiktok", "atlassian"))
+            self.assertIn(c["provider"], ("greenhouse", "lever", "ashby", "workday", "amazon", "google", "apple", "browser", "hn", "avature", "deshaw", "oracle", "tiktok", "atlassian", "jibe"))
             self.assertTrue(c["name"])
             self.assertNotIn(c["name"], names)
             names.add(c["name"])
             if c["provider"] == "workday":
                 self.assertTrue(c["host"].endswith(".myworkdayjobs.com") and c["tenant"] and c["site"])
+            elif c["provider"] == "jibe":
+                self.assertTrue(c["host"] and "/" not in c["host"])
             elif c["provider"] == "oracle":
                 self.assertTrue(c["host"].endswith(".oraclecloud.com") and c["site"])
             elif c["provider"] == "avature":
@@ -340,3 +350,14 @@ class ConfigTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LocationSegmentTests(unittest.TestCase):
+    def ok(self, loc):
+        return jobs.location_ok(loc, False, CFG)
+
+    def test_new_york_wins_next_to_excluded_places_and_bay_area_needs_a_clean_segment(self):
+        self.assertTrue(self.ok("New York, NY; London, UK"))
+        self.assertTrue(self.ok("San Francisco, CA; London, UK"))
+        self.assertFalse(self.ok("Costa Rica, San Jose"))
+        self.assertFalse(self.ok("San Jose, Costa Rica"))

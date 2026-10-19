@@ -76,8 +76,9 @@ class AmazonTests(unittest.TestCase):
         net = FakeNet(amazon=[])
         cfg = dict(CFG, companies=[{"name": "Amazon", "provider": "amazon", "tier": 2, "queries": ["a", "b"]}])
         run(jobs.scan(cfg, net, os.path.join(tempfile.mkdtemp(), "t.db"), now=NOW))
-        self.assertEqual(len(net.calls), 2)                     # one request per query
+        self.assertEqual(len(net.calls), 4)                     # one request per query and place (New York, San Francisco)
         self.assertIn("New+York", net.calls[0][0])
+        self.assertIn("San+Francisco", net.calls[2][0])
 
 
 class WorkdayTests(unittest.TestCase):
@@ -119,7 +120,7 @@ class WorkdayTests(unittest.TestCase):
         async def net(url, body=None):
             return 200, {"total": 0, "jobPostings": [], "facets": []}
         _, n, errors = run(jobs.scan(dict(CFG, companies=[self.COMPANY]), net, os.path.join(tempfile.mkdtemp(), "t.db"), now=NOW))
-        self.assertEqual(errors, ["Acme: no New York filter found"])
+        self.assertEqual(errors, ["Acme: no New York, San Francisco or remote filter found"])
 
     def test_paging_stops_at_the_limit(self):
         postings = [{"title": f"Software Engineer {i}", "externalPath": f"/job/p{i}", "locationsText": "US, NY, New York", "postedOn": "Posted Today"} for i in range(400)]
@@ -130,3 +131,35 @@ class WorkdayTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WorkdayWiderPlacesTests(unittest.TestCase):
+    COMPANY = {"name": "Acme", "provider": "workday", "host": "acme.wd5.myworkdayjobs.com", "tenant": "acme", "site": "Careers", "tier": 2, "search": "engineer"}
+    FACETS = {"total": 3, "jobPostings": [], "facets": [
+        {"facetParameter": "locations", "values": [{"descriptor": "US, NY, New York", "id": "ny"}, {"descriptor": "San Francisco, CA", "id": "sf"},
+                                                    {"descriptor": "Austin, TX", "id": "aus"}]},
+        {"facetParameter": "remoteType", "values": [{"descriptor": "Remote", "id": "rem"}]}]}
+
+    def test_extra_places_are_found_per_filter_group(self):
+        self.assertEqual(jobs._facet_ids(self.FACETS["facets"]), {"locations": ["ny"]})
+        self.assertEqual(jobs._facet_ids(self.FACETS["facets"], match=jobs._is_extra_place), {"locations": ["sf"], "remoteType": ["rem"]})
+
+    def test_each_group_is_queried_separately_and_unknown_places_are_labelled_unverified(self):
+        asked = []
+
+        async def net(url, body=None):
+            if body["limit"] == 1:
+                return 200, self.FACETS
+            asked.append(body["appliedFacets"])
+            key = list(body["appliedFacets"].values())[0][0]
+            return 200, {"total": 1, "jobPostings": [{"title": f"Software Engineer {key}", "externalPath": f"/job/{key}",
+                                                     "locationsText": "2 Locations" if key == "rem" else "San Francisco, CA", "postedOn": "Posted Today"}]}
+
+        found, err = run(jobs.fetch_workday(dict(self.COMPANY), net, NOW))
+        self.assertIsNone(err)
+        self.assertEqual(asked, [{"locations": ["ny"]}, {"locations": ["sf"]}, {"remoteType": ["rem"]}])   # never ANDed together
+        by = {j["title"]: j for j in found}
+        self.assertEqual(by["Software Engineer rem"]["location"], "San Francisco Bay Area or remote (one of 2 Locations)")
+        self.assertIs(by["Software Engineer rem"]["location_verified"], False)
+        self.assertTrue(by["Software Engineer rem"]["remote"])
+        self.assertNotIn("location_verified", by["Software Engineer sf"])

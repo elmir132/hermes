@@ -42,7 +42,7 @@ class TikTokTests(unittest.TestCase):
         url, body, headers = calls[0]
         self.assertEqual(url, jobs.TIKTOK_SEARCH)
         self.assertEqual(headers, {"website-path": "tiktok"})
-        self.assertEqual(body["location_code_list"], ["CT_114"])
+        self.assertEqual(body["location_code_list"], ["CT_114", "CT_1103355"])          # New York, San Jose
 
     def test_an_error_response_is_reported(self):
         async def get_json(url, body=None, headers=None):
