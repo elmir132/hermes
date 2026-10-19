@@ -2589,6 +2589,39 @@
    "name": "Applied Intuition",
    "provider": "ashby",
    "slug": "applied",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": true
+   }
+  },
+  {
+   "name": "Hebbia",
+   "provider": "ashby",
+   "slug": "hebbia-ai",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Headlands Technologies",
+   "provider": "greenhouse",
+   "slug": "headlandstechnologiesllc",
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   },
    "tier": 2
   },
   {
