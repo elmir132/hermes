@@ -2707,6 +2707,86 @@
     "sponsor": null
    },
    "tier": 4
+  },
+  {
+   "name": "RTX",
+   "provider": "workday",
+   "host": "globalhr.wd5.myworkdayjobs.com",
+   "tenant": "globalhr",
+   "site": "REC_RTX_Ext_Gateway",
+   "search": "software engineer",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": false
+   },
+   "tier": 3
+  },
+  {
+   "name": "Boeing",
+   "provider": "workday",
+   "host": "boeing.wd1.myworkdayjobs.com",
+   "tenant": "boeing",
+   "site": "EXTERNAL_CAREERS",
+   "search": "software engineer",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": false
+   },
+   "tier": 3
+  },
+  {
+   "name": "Northrop Grumman",
+   "provider": "workday",
+   "host": "ngc.wd1.myworkdayjobs.com",
+   "tenant": "ngc",
+   "site": "Northrop_Grumman_External_Site",
+   "search": "software engineer",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": false
+   },
+   "tier": 3
+  },
+  {
+   "name": "Leidos",
+   "provider": "workday",
+   "host": "leidos.wd5.myworkdayjobs.com",
+   "tenant": "leidos",
+   "site": "External",
+   "search": "software engineer",
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": false
+   },
+   "tier": 4
+  },
+  {
+   "name": "General Dynamics IT",
+   "provider": "workday",
+   "host": "gdit.wd5.myworkdayjobs.com",
+   "tenant": "gdit",
+   "site": "External_Career_Site",
+   "search": "software engineer",
+   "ratings": {
+    "pay": 2,
+    "prestige": 2,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": false
+   },
+   "tier": 4
   }
  ],
  "strong_title": [

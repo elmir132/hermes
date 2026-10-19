@@ -28,7 +28,21 @@ NO_SPONSOR = re.compile(
     r"(will not|won't|unable to|cannot|can't|do not|does not|not able to|not currently)\s+(be able to\s+)?(provide|offer|sponsor|support)\b[^.]{0,60}(visa|sponsorship|work authori[sz]ation)"
     r"|no\s+(visa\s+)?sponsorship|sponsorship\s+(is\s+)?not\s+(available|offered|provided)"
     r"|without\s+(the\s+need\s+for\s+)?(visa\s+)?sponsorship", re.I)
-CITIZEN_ONLY = re.compile(r"u\.?s\.?\s+citizen(s|ship)?\s+(only|required)|must\s+be\s+a\s+u\.?s\.?\s+citizen|security\s+clearance|ts/sci|top\s+secret", re.I)
+US_CITIZEN_REQUIRED = re.compile(
+    r"u\.?s\.?\s+citizen(s|ship)?\s+(only|required)|must\s+be\s+(a\s+)?u\.?s\.?\s+citizens?"
+    r"|citizenship\s+(is\s+)?required|must\s+possess\s+u\.?s\.?\s+citizenship", re.I)
+US_PERSON_REQUIRED = re.compile(r"u\.?s\.?\s+person(s)?\s+(only|required)|must\s+be\s+(a\s+)?u\.?s\.?\s+persons?", re.I)
+# A sentence that says the requirement does NOT apply ("no clearance required", "citizenship is not required").
+NOT_REQUIRED = re.compile(
+    r"\b(?:no|not|without|never|doesn'?t|does not|don'?t|do not)\b[^.\n]{0,40}\b(?:clearance|citizenship|citizen)\b"
+    r"|\b(?:clearance|citizenship)\b[^.\n]{0,40}\b(?:is\s+not|isn'?t|not)\s+(?:required|needed|necessary)", re.I)
+CLEARANCE_MENTION = re.compile(r"security clearance|ts/sci|top secret|secret clearance", re.I)
+CLEARANCE_REQUIRED = re.compile(
+    r"(?:active|current|valid|security|top secret|secret|ts/sci)?\s*clearance"
+    r"[^.\n]{0,70}\b(?:require[sd]?|must\s+(?:be able to\s+)?(?:obtain|maintain|possess)|eligib(?:le|ility))\b"
+    r"|\b(?:require[sd]?|must\s+(?:be able to\s+)?(?:obtain|maintain|possess))\b[^.\n]{0,70}"
+    r"(?:active|current|valid|security|top secret|secret|ts/sci)?\s*clearance", re.I)
+EXPORT_CONTROL = re.compile(r"\bITAR\b|\bEAR\b|(?i:\bexport[ -]control(?:led|s)?\b)")   # ITAR/EAR only as capitals: "an ear for detail" is not one
 SPONSORS = re.compile(r"(visa\s+sponsorship\s+(is\s+)?(available|offered|provided))|((we|will)\s+(provide\s+|offer\s+)?sponsor)|sponsor(s|ship)?\s+(for\s+)?(h-?1b|visas?)", re.I)
 
 
@@ -860,14 +874,27 @@ def has(text: str, words) -> bool:
     return any(re.search(r"(?<![a-z0-9])" + re.escape(w.lower()) + r"(?![a-z0-9])", text) for w in words)
 
 
+US_STATES = ("al ak az ar co ct de fl ga hi id il in ia ks ky la me md ma mi mn ms mo mt ne nv nh nj nm ny nc nd oh ok or pa "
+             "ri sc sd tn tx ut vt va wa wv wi wy dc").split()
+STATE_NAMES = ("alabama alaska arizona arkansas colorado connecticut delaware florida georgia hawaii idaho illinois indiana iowa "
+               "kansas kentucky louisiana maine maryland massachusetts michigan minnesota mississippi missouri montana nebraska "
+               "nevada ohio oklahoma oregon pennsylvania tennessee texas utah vermont virginia washington wisconsin wyoming").split()
+
+
+def _other_state(part: str) -> bool:
+    """True when a location segment names a US state other than California: 'Berkeley, MO' is not the Bay Area."""
+    codes = re.findall(r"(?:,|-|\b(?:usa|us)\s*-)\s*([a-z]{2})\b", part)
+    return any(c in US_STATES for c in codes) or any(re.search(rf"\b{n}\b", part) for n in STATE_NAMES)
+
+
 def location_ok(location: str, remote: bool, cfg: dict) -> bool:
     text = location.lower()
     if has(text, cfg.get("home_locations", [])):
         return True                                           # New York always counts, even next to other cities
     if has(text, cfg.get("locations", [])):
-        # other allowed places (the Bay Area) count only in a segment that names no excluded country,
-        # so "Costa Rica, San Jose" is out but "San Francisco; London" is in
-        return any(has(part, cfg.get("locations", [])) and not has(part, cfg.get("exclude_locations", []))
+        # other allowed places (the Bay Area) count only in a segment that names no excluded country and no other
+        # US state, so "Costa Rica, San Jose" and "Berkeley, MO" are out but "San Francisco; London" is in
+        return any(has(part, cfg.get("locations", [])) and not has(part, cfg.get("exclude_locations", [])) and not _other_state(part)
                    for part in re.split(r"[;|/]|\band\b", text))
     if has(text, cfg.get("exclude_locations", [])):
         return False
@@ -958,8 +985,8 @@ def tier_from_ratings(ratings: dict) -> int:
 
 def visa_flags(text: str, ratings=None) -> list:
     flags = []
-    if CITIZEN_ONLY.search(text):
-        flags.append("⚠️ citizenship or clearance required")
+    if any(f.startswith("⚠️") for f in eligibility_flags(text)):
+        flags.append("⚠️ citizenship or clearance required")  # short summary; /jobs shows the specific eligibility flags instead
     if NO_SPONSOR.search(text):
         flags.append("⚠️ says no sponsorship")
     if SPONSORS.search(text) and not flags:
@@ -972,6 +999,34 @@ def visa_flags(text: str, ratings=None) -> list:
     if known is False:
         return ["visa: not stated (the company rarely sponsors; estimate)"]
     return ["visa: not stated"]
+
+
+INELIGIBLE = ("⚠️ U.S. citizenship required", "⚠️ U.S. person requirement", "⚠️ security clearance required")   # hidden by default
+
+
+def _requirement_sentences(text: str):
+    """The posting's sentences, minus those that say a clearance or citizenship is NOT needed."""
+    parts = re.split(r"(?<=[.!?;])\s+(?=[A-Z(\"'])|\n+", text or "")   # "U.S. citizen" is not split: a capital must follow
+    return [s for s in parts if s.strip() and not NOT_REQUIRED.search(s)]
+
+
+def eligibility_flags(text: str) -> list:
+    """Posting-level eligibility cues, read sentence by sentence; an explicit requirement is told apart from a mention.
+    Only hints: clearance and citizenship rules apply to particular roles, not to whole companies."""
+    sentences = _requirement_sentences(text)
+    has = lambda pattern: any(pattern.search(s) for s in sentences)
+    flags = []
+    if has(US_CITIZEN_REQUIRED):
+        flags.append("⚠️ U.S. citizenship required")
+    if has(US_PERSON_REQUIRED):
+        flags.append("⚠️ U.S. person requirement")
+    if has(CLEARANCE_REQUIRED):
+        flags.append("⚠️ security clearance required")
+    elif has(CLEARANCE_MENTION):
+        flags.append("🔎 clearance mentioned; requirement unclear")
+    if has(EXPORT_CONTROL) and not has(US_PERSON_REQUIRED):
+        flags.append("🔎 export-control wording; check role eligibility")
+    return flags
 
 
 def age_days(job: dict, now=None):
@@ -1028,6 +1083,73 @@ def mark_seen(path, keys, now=None):
         con.execute("DELETE FROM jobs_seen WHERE seen_at < ?", ((now - timedelta(days=120)).isoformat(),))
 
 
+def _source_key(company: dict) -> str:
+    provider = company.get("provider", "unknown")
+    identity = company.get("slug") or company.get("tenant") or company.get("source") or company.get("name", "unknown")
+    return f"{provider}:{identity}"
+
+
+def _record_source_status(path, results, now=None):
+    """Persist each source's latest attempt and preserve its last successful fetch."""
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    stamp = now.astimezone(timezone.utc).isoformat()
+    with closing(sqlite3.connect(path)) as con, con:
+        con.execute("""CREATE TABLE IF NOT EXISTS jobs_source_status (
+            source_key TEXT PRIMARY KEY,
+            company TEXT NOT NULL,
+            provider TEXT NOT NULL,
+            last_attempt_at TEXT NOT NULL,
+            last_success_at TEXT,
+            last_error TEXT,
+            last_result_count INTEGER NOT NULL DEFAULT 0
+        )""")
+        for company, provider, _slug, name, found, err in results:
+            key = _source_key(company)
+            con.execute("""INSERT INTO jobs_source_status
+                (source_key, company, provider, last_attempt_at, last_success_at, last_error, last_result_count)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(source_key) DO UPDATE SET
+                    company=excluded.company,
+                    provider=excluded.provider,
+                    last_attempt_at=excluded.last_attempt_at,
+                    last_success_at=CASE WHEN excluded.last_error IS NULL
+                        THEN excluded.last_attempt_at ELSE jobs_source_status.last_success_at END,
+                    last_error=excluded.last_error,
+                    last_result_count=CASE WHEN excluded.last_error IS NULL
+                        THEN excluded.last_result_count ELSE jobs_source_status.last_result_count END""",
+                (key, name, provider, stamp, stamp if not err else None,
+                 str(err)[:500] if err else None, len(found or [])))
+        rows = con.execute("SELECT source_key, company, last_attempt_at, last_success_at, last_error, last_result_count FROM jobs_source_status").fetchall()
+    return {row[0]: {"company": row[1], "last_attempt_at": row[2], "last_success_at": row[3],
+                     "last_error": row[4], "last_result_count": row[5]} for row in rows}
+
+
+def _format_scan_stamp(value):
+    if not value:
+        return "never"
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).strftime("%b %-d %H:%M UTC")
+    except (TypeError, ValueError):
+        return "unknown"
+
+
+def _source_status_summary(results, status_by_key):
+    failed = [(result, status_by_key.get(_source_key(result[0]), {})) for result in results if result[5]]
+    succeeded, total = len(results) - len(failed), len(results)
+    stamp = status_by_key.get(_source_key(results[0][0]), {}).get("last_attempt_at") if results else None
+    lines = [f"Sources: {succeeded}/{total} succeeded at {_format_scan_stamp(stamp)}." if total else "Sources: none configured."]
+    for result, status in failed[:5]:
+        lines.append(f"• {result[3]} failed; last good {_format_scan_stamp(status.get('last_success_at'))} ({str(result[5])[:90]})")
+    if len(failed) > 5:
+        lines.append(f"• {len(failed) - 5} more source failures; see logs")
+    return "\n".join(lines)
+
+
 # ---------- the scan ----------
 async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None, get_html=None):
     """get_json(url) -> (status, JSON); get_html(url) -> (status, text). Returns text, count and errors."""
@@ -1079,7 +1201,22 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 found, err = (jobs_from_feed(provider, payload, name), None) if status == 200 else ([], f"HTTP {status}")
         return company, provider, slug, name, found, err
 
-    results = await asyncio.gather(*(read_company(c) for c in cfg.get("companies", [])))
+    companies = cfg.get("companies", [])
+    gathered = await asyncio.gather(*(read_company(c) for c in companies), return_exceptions=True)
+    results = []
+    for company, result in zip(companies, gathered):
+        if isinstance(result, asyncio.CancelledError):
+            raise result
+        if isinstance(result, BaseException) and not isinstance(result, Exception):
+            raise result
+        if isinstance(result, Exception):
+            provider, name = company.get("provider", "unknown"), company.get("name", "unknown")
+            slug = company.get("slug", company.get("tenant", ""))
+            results.append((company, provider, slug, name, [], f"reader error: {type(result).__name__}" + (f": {str(result)[:160]}" if str(result) else "")))
+        else:
+            results.append(result)
+    source_status = _record_source_status(db_path, results, now)
+    source_summary = _source_status_summary(results, source_status)
     for company, provider, slug, name, found, err in results:
         if err:
             errors.append(f"{name}: {err}")
@@ -1097,6 +1234,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     fresh = [(p, s, j) for p, s, j in candidates if j["key"] not in old]
     fresh.sort(key=lambda x: (-x[2]["score"], x[2]["company"], x[2]["title"]))
     shown, skipped_keys, fetched, per_company = [], [], 0, {}
+    hidden_ineligible = 0
     cap = cfg.get("max_per_company") or 10**6
     wanted = limit or cfg.get("max_per_message", 12)
     max_years = cfg.get("max_years")
@@ -1152,20 +1290,31 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             continue
         job["age"] = age_days(job, now)
         if job.get("details_checked") is False:
-            job["flags"] = ["posting details not read; location, pay, visa, experience unchecked"]
+            job["flags"] = ["posting details not read; location, pay, visa, eligibility, experience unchecked"]
         else:
-            job["flags"] = [pay_label(job["pay"])] + visa_flags(job["text"], job.get("ratings")) + ([f"asks for {years}+ years"] if years and years >= 3 else [])
+            eligibility = eligibility_flags(job["text"])
+            if cfg.get("hide_ineligible", True) and any(f in eligibility for f in INELIGIBLE):
+                skipped_keys.append(job["key"])                  # the posting itself says U.S. citizens/persons or a clearance only
+                hidden_ineligible += 1
+                continue
+            visa_notes = [f for f in visa_flags(job["text"], job.get("ratings"))
+                          if f != "⚠️ citizenship or clearance required"]
+            job["flags"] = ([pay_label(job["pay"])] + visa_notes + eligibility
+                             + ([f"asks for {years}+ years"] if years and years >= 3 else []))
         shown.append((provider, slug, job))
         per_company[job["company"]] = per_company.get(job["company"], 0) + 1
     if mark:
         mark_seen(db_path, skipped_keys)
+    hidden_note = (f"\nHidden: {hidden_ineligible} posting{'s' if hidden_ineligible != 1 else ''} that say U.S. citizenship, "
+                   f"U.S. person status or a security clearance is required." if hidden_ineligible else "")
     if not shown:
-        return "No new matching roles today." + _errs(errors), 0, errors
+        return "No new matching roles today.\n\n" + source_summary + hidden_note + _errs(errors), 0, errors
     remaining = len(fresh) - len(shown) - len(skipped_keys)      # roughly; capped companies keep their extras for later
     if collect is not None:                                      # lets the bot answer "/fit 3" and "/applied 3" later
         collect[:] = [{"company": j["company"], "title": j["title"], "location": j["location"], "url": j["url"],
                        "text": j["text"][:5000], "pay": j["pay"], "tier": j.get("tier", 0)} for _, _, j in shown]
-    lines = [f"{len(shown)} new role{'s' if len(shown) != 1 else ''} (about {max(remaining, 0)} more waiting):"]
+    lines = [f"{len(shown)} new role{'s' if len(shown) != 1 else ''} (about {max(remaining, 0)} more waiting):",
+             source_summary + hidden_note]
     for n, (_, _, j) in enumerate(shown, 1):
         where = j["location"] if len(j["location"]) <= 60 else j["location"][:57] + "..."
         if j.get("location_verified") is False:
