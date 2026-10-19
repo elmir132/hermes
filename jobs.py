@@ -41,6 +41,7 @@ APPLE_QUERIES = ["software engineer", "machine learning engineer", "new grad sof
 SEARCH_PAGE_LIMIT = 20
 AVATURE_PAGE_LIMIT = 40      # Bloomberg is about 30 pages of 12 roles, Two Sigma about 10 pages of 10
 PAGE_DELAY = 1.0             # seconds between page requests to one careers site
+AVATURE_DETAIL_LIMIT = 20    # at most this many 'Multiple Locations' posting pages opened per company per scan
 DESHAW_URL = "https://www.deshaw.com/careers"
 ORACLE_QUERIES = ["software engineer", "machine learning"]
 ORACLE_PAGE = 100           # Oracle Recruiting returns at most 100 per request
@@ -52,6 +53,7 @@ TIKTOK_QUERIES = ["engineer", "machine learning", "data scientist"]
 ATLASSIAN_LISTINGS = "https://www.atlassian.com/endpoint/careers/listings"
 JIBE_QUERIES = ["software engineer", "machine learning"]
 GEM = "https://api.gem.com/job_board/v0/{slug}/job_posts/"     # Gem's documented public Job Board API (Greenhouse-shaped)
+RIPPLING = "https://api.rippling.com/platform/api/ats/v1/board/{slug}/jobs"   # the public board API behind ats.rippling.com
 CONCURRENCY = 4
 BROWSER_FILE = Path(__file__).parent / "browser_jobs.json"      # written daily by browser_reader.py on the Mac
 BROWSER_STALE_DAYS = 3
@@ -427,11 +429,13 @@ def _clean(fragment: str) -> str:
 
 
 def parse_avature_html(page: str, company: str, host: str) -> list:
-    """Jobs from an Avature search results page (Bloomberg, Two Sigma). Only links on the careers host itself are kept.
-    Bloomberg shows the location in `list-item-location`; Two Sigma shows location, team and level as plain spans."""
+    """Jobs from an Avature search results page (Bloomberg, Two Sigma, Deloitte). Only links on the careers host itself are kept.
+    Bloomberg shows the location in `list-item-location`; Two Sigma shows location, team and level as plain spans;
+    Deloitte shows 'firm | business | location' spans in the subtitle (the location is the last one)."""
     out = []
-    for block in re.findall(r'<article class="article article--result".*?</article>', page if isinstance(page, str) else "", re.S):
-        link = re.search(r'<a class="link" href="([^"]+/JobDetail/[^"]+)"[^>]*>(.*?)</a>', block, re.S)
+    for block in re.findall(r'<article class="[^"]*\barticle--result\b[^"]*".*?</article>', page if isinstance(page, str) else "", re.S):
+        link = (re.search(r'<a class="link" href="([^"]+/JobDetail/[^"]+)"[^>]*>(.*?)</a>', block, re.S)
+                or re.search(r'<a href="([^"]+/JobDetail/[^"]+)"[^>]*class="link"[^>]*>(.*?)</a>', block, re.S))
         if not link:
             continue
         url = html_lib.unescape(link.group(1))
@@ -441,7 +445,16 @@ def parse_avature_html(page: str, company: str, host: str) -> list:
         loc = re.search(r'class="list-item-location"[^>]*>(.*?)</span>', block, re.S)
         spans = [_clean(x) for x in re.findall(r'class="paragraph_inner-span"[^>]*>(.*?)</span>', block, re.S)]
         spans = [x for x in spans if x]
-        location, extra = (_clean(loc.group(1)), []) if loc else ((spans[0], spans[1:]) if spans else ("", []))
+        sub = re.search(r'class="article__header__text__subtitle"[^>]*>(.*?)</div>', block, re.S)
+        sub_spans = [x for x in (_clean(s) for s in re.findall(r"<span[^>]*>(.*?)</span>", sub.group(1), re.S)) if x] if sub else []
+        if loc:
+            location, extra = _clean(loc.group(1)), []
+        elif spans:
+            location, extra = spans[0], spans[1:]
+        elif sub_spans:
+            location, extra = sub_spans[-1], []
+        else:
+            location, extra = "", []
         job_id = re.search(r"/(\d+)/?$", urlsplit(url).path)
         if not title:
             continue
@@ -459,7 +472,7 @@ async def fetch_avature(company: dict, get_html):
     for page_number in range(AVATURE_PAGE_LIMIT):
         if page_number:
             await asyncio.sleep(PAGE_DELAY)
-        status, page = await get_html(search if offset == 0 else f"{search}?jobOffset={offset}")
+        status, page = await get_html(search if offset == 0 else f"{search}{'&' if '?' in search else '?'}jobOffset={offset}")
         if status != 200:
             return found, f"HTTP {status}" + (f" on page {page_number + 1}" if page_number else "")
         jobs_on_page = parse_avature_html(page, name, host)
@@ -474,6 +487,39 @@ async def fetch_avature(company: dict, get_html):
     else:
         return found, f"stopped after {AVATURE_PAGE_LIMIT} pages (the list is longer)"
     return found, None
+
+
+def avature_places(text: str):
+    """Cities from an Avature posting page whose list said 'Multiple Locations'. Deloitte prints
+    'Same job available in 43 locations <city, state, country> ...' before 'Back to search results'."""
+    m = re.search(r"(?i)(?:same job available in \d+ locations?|multiple locations?)\s*:?\s*(.{3,6000}?)\s*back to search results", text or "")
+    if not m:
+        return None
+    places = list(dict.fromkeys(p.strip() for p in re.findall(r"[A-Z][A-Za-z .'-]+?, [A-Z][A-Za-z .'-]+?, (?:United States|USA|US)\b", m.group(1))))
+    rank = lambda p: 0 if "new york" in p.lower() else 1 if any(city in p.lower() for city in BAY_AREA) else 2   # shown first when cut short
+    return "; ".join(sorted(places, key=rank)) or None
+
+
+async def resolve_avature_places(found: list, company: dict, cfg: dict, get_html, now=None):
+    """Read the posting page of roles listed only as 'Multiple Locations', but only when the title would pass if it were in New York.
+    Paced like the search pages and capped, so one big careers site cannot slow the scan for long."""
+    read = 0
+    for job in found:
+        if job["location"].strip().lower() not in ("multiple locations", "multiple location") or read >= AVATURE_DETAIL_LIMIT:
+            continue
+        if score_job(dict(job, location="New York, NY", tier=company.get("tier", 0)), cfg, now) is None:
+            continue                                              # the title or level fails anyway: no need to open it
+        read += 1
+        await asyncio.sleep(PAGE_DELAY)
+        status, page = await get_html(job["url"])
+        body = page_text(page) if status == 200 and isinstance(page, str) else ""
+        places = avature_places(body)
+        if places:
+            job["location"], job["location_verified"] = places, True
+        if len(body) > 500:
+            job["text"], job["details_checked"] = body, True
+            job["pay"] = job.get("pay") or pay_from_text(body)
+    return found
 
 
 def parse_deshaw_html(page: str, company: str = "D. E. Shaw") -> list:
@@ -673,6 +719,64 @@ async def fetch_gem(company: dict, get_json):
     if status != 200 or not isinstance(data, list):
         return [], f"HTTP {status}"
     return gem_jobs(data, company.get("name", company["slug"])), None
+
+
+def rippling_jobs(posts, company: str, slug: str) -> list:
+    """Jobs from a Rippling ATS board's public list (one row per role and location; no description yet).
+    Rows of the same role are merged into one job with all its places, so a role is never shown twice."""
+    merged = {}
+    for job in _rippling_rows(posts, company, slug):
+        if job["rippling_id"] in merged:
+            first = merged[job["rippling_id"]]
+            if job["location"] and job["location"] not in first["location"].split("; "):
+                first["location"] = "; ".join(x for x in (first["location"], job["location"]) if x)
+            first["remote"] = first["remote"] or job["remote"]
+            first["location_verified"] = first["location_verified"] or job["location_verified"]
+        else:
+            merged[job["rippling_id"]] = job
+    return list(merged.values())
+
+
+def _rippling_rows(posts, company: str, slug: str) -> list:
+    out = []
+    for raw in posts if isinstance(posts, list) else []:
+        if not isinstance(raw, dict):
+            continue
+        uid, title = str(raw.get("uuid") or ""), _clean(raw.get("name") or "")
+        url = str(raw.get("url") or "")
+        if not re.fullmatch(r"[0-9a-f-]{36}", uid) or not title or not url.startswith(f"https://ats.rippling.com/{slug}/jobs/"):
+            continue
+        place = _clean(((raw.get("workLocation") or {}).get("label")) or "")
+        out.append({"key": f"rippling:{company}:{uid}", "company": company, "title": title, "location": place,
+                    "location_verified": bool(place), "remote": place.lower().startswith("remote"), "url": url, "published": "",
+                    "text": "", "employment": "", "pay": None, "details_checked": False, "rippling_id": uid})
+    return out
+
+
+async def fetch_rippling(company: dict, get_json):
+    status, data = await get_json(RIPPLING.format(slug=company["slug"]))
+    if status != 200 or not isinstance(data, list):
+        return [], f"HTTP {status}"
+    return rippling_jobs(data, company.get("name", company["slug"]), company["slug"]), None
+
+
+def rippling_detail(job: dict, detail) -> bool:
+    """Fill text, pay and employment from a Rippling job page's JSON. Returns False if it is not full-time salaried work."""
+    if not isinstance(detail, dict):
+        return True
+    desc = detail.get("description")                      # {'company': blurb, 'role': the posting}; the blurb is skipped
+    parts = [desc.get("role")] if isinstance(desc, dict) and desc.get("role") else (desc.values() if isinstance(desc, dict) else [desc])
+    job["text"] = _clean(" ".join(str(p or "") for p in parts))
+    job["details_checked"] = bool(job["text"])
+    kind = detail.get("employmentType") or {}
+    job["employment"] = str(kind.get("id") or kind.get("label") or "") if isinstance(kind, dict) else str(kind)
+    for r in detail.get("payRangeDetails") or []:
+        lo, hi = (r.get("rangeStart"), r.get("rangeEnd")) if isinstance(r, dict) else (None, None)
+        if isinstance(r, dict) and str(r.get("currency") or "USD").upper() == "USD" and lo and hi and str(r.get("frequency") or "YEAR").upper().startswith("YEAR"):
+            job["pay"] = (int(lo), int(hi))
+            break
+    label = str(kind.get("label") or "").upper() if isinstance(kind, dict) else ""
+    return not any(k in label for k in ("INTERN", "CONTRACT", "PART", "TEMP"))
 
 
 def browser_jobs(company: dict, cfg: dict, now=None, path=None):
@@ -940,6 +1044,8 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 found, err = await fetch_workday(dict(company, name=name), get_json, now)
             elif provider == "gem":
                 found, err = await fetch_gem(dict(company, name=name), get_json)
+            elif provider == "rippling":
+                found, err = await fetch_rippling(dict(company, name=name), get_json)
             elif provider == "jibe":
                 found, err = await fetch_jibe(dict(company, name=name), get_json)
             elif provider == "tiktok":
@@ -953,6 +1059,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                     found, err = [], "HTML reader is not configured"
                 elif provider == "avature":
                     found, err = await fetch_avature(dict(company, name=name), get_html)
+                    found = await resolve_avature_places(found, company, cfg, get_html, now)
                 else:
                     found, err = await fetch_deshaw(dict(company, name=name), get_html)
             elif provider in ("google", "apple"):
@@ -1009,6 +1116,14 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                     if r.get("currency_type") == "USD" and r.get("min_cents") and r.get("max_cents"):
                         job["pay"] = (int(r["min_cents"]) // 100, int(r["max_cents"]) // 100)
                         break
+        if provider == "rippling" and not job["text"] and job.get("rippling_id"):
+            if fetched >= DETAIL_LIMIT * 2:
+                continue
+            fetched += 1
+            status, detail = await get_json(f"{RIPPLING.format(slug=slug)}/{job['rippling_id']}")
+            if status == 200 and not rippling_detail(job, detail):
+                skipped_keys.append(job["key"])                  # internship, contract or part-time
+                continue
         if provider == "workday" and not job["text"]:
             if fetched >= DETAIL_LIMIT * 2:
                 continue

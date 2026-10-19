@@ -2667,6 +2667,46 @@
    "name": "Hacker News: Who is hiring",
    "provider": "hn",
    "tier": 3
+  },
+  {
+   "name": "Rippling",
+   "provider": "rippling",
+   "slug": "rippling",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Dell",
+   "provider": "oracle",
+   "host": "enterpriseplatform.dell.com",
+   "site": "CX_1001",
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": true
+   },
+   "tier": 4
+  },
+  {
+   "name": "Deloitte",
+   "provider": "avature",
+   "search": "https://apply.deloitte.com/en_US/careers/SearchJobs/software%20engineer?listFilterMode=1&jobRecordsPerPage=25",
+   "ratings": {
+    "pay": 2,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 4
   }
  ],
  "strong_title": [
