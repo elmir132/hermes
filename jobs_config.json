@@ -4,337 +4,739 @@
    "name": "Jane Street",
    "provider": "greenhouse",
    "slug": "janestreet",
-   "tier": 1
+   "tier": 1,
+   "ratings": {
+    "pay": 5,
+    "prestige": 5,
+    "wlb": 3,
+    "exits": 5,
+    "sponsor": true
+   }
   },
   {
    "name": "Hudson River Trading",
    "provider": "ashby",
    "slug": "hrt",
-   "tier": 1
+   "tier": 1,
+   "ratings": {
+    "pay": 5,
+    "prestige": 5,
+    "wlb": 3,
+    "exits": 5,
+    "sponsor": true
+   }
   },
   {
    "name": "Jump Trading",
    "provider": "greenhouse",
    "slug": "jumptrading",
-   "tier": 1
+   "tier": 2,
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Optiver",
    "provider": "greenhouse",
    "slug": "optiver",
-   "tier": 1
+   "tier": 2,
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "IMC Trading",
    "provider": "greenhouse",
    "slug": "imc",
-   "tier": 1
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "OpenAI",
    "provider": "ashby",
    "slug": "openai",
-   "tier": 1
+   "tier": 1,
+   "ratings": {
+    "pay": 5,
+    "prestige": 5,
+    "wlb": 2,
+    "exits": 5,
+    "sponsor": true
+   }
   },
   {
    "name": "Anthropic",
    "provider": "greenhouse",
    "slug": "anthropic",
-   "tier": 1
+   "tier": 1,
+   "ratings": {
+    "pay": 5,
+    "prestige": 5,
+    "wlb": 3,
+    "exits": 5,
+    "sponsor": true
+   }
   },
   {
    "name": "xAI",
    "provider": "greenhouse",
    "slug": "xai",
-   "tier": 1
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 1,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Databricks",
    "provider": "greenhouse",
    "slug": "databricks",
-   "tier": 2
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 5,
+    "sponsor": true
+   }
   },
   {
    "name": "Stripe",
    "provider": "greenhouse",
    "slug": "stripe",
-   "tier": 2
+   "tier": 1,
+   "ratings": {
+    "pay": 4,
+    "prestige": 5,
+    "wlb": 3,
+    "exits": 5,
+    "sponsor": true
+   }
   },
   {
    "name": "Scale AI",
    "provider": "greenhouse",
    "slug": "scaleai",
-   "tier": 2
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Point72",
    "provider": "greenhouse",
    "slug": "point72",
-   "tier": 2
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Virtu Financial",
    "provider": "greenhouse",
    "slug": "virtu",
-   "tier": 2
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Akuna Capital",
    "provider": "greenhouse",
    "slug": "akunacapital",
-   "tier": 2
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Palantir",
    "provider": "lever",
    "slug": "palantir",
-   "tier": 2
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Snowflake",
    "provider": "ashby",
    "slug": "snowflake",
-   "tier": 2
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Airbnb",
    "provider": "greenhouse",
    "slug": "airbnb",
-   "tier": 2
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 4,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Figma",
    "provider": "greenhouse",
    "slug": "figma",
-   "tier": 2
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Ramp",
    "provider": "ashby",
    "slug": "ramp",
-   "tier": 2
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Cursor",
    "provider": "ashby",
    "slug": "cursor",
-   "tier": 2
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 1,
+    "exits": 4,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Reddit",
    "provider": "greenhouse",
    "slug": "reddit",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Datadog",
    "provider": "greenhouse",
    "slug": "datadog",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Cloudflare",
    "provider": "greenhouse",
    "slug": "cloudflare",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Coinbase",
    "provider": "greenhouse",
    "slug": "coinbase",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Robinhood",
    "provider": "greenhouse",
    "slug": "robinhood",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Plaid",
    "provider": "ashby",
    "slug": "plaid",
-   "tier": 3
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Notion",
    "provider": "ashby",
    "slug": "notion",
-   "tier": 3
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "MongoDB",
    "provider": "greenhouse",
    "slug": "mongodb",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Dropbox",
    "provider": "greenhouse",
    "slug": "dropbox",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Block",
    "provider": "greenhouse",
    "slug": "block",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Roblox",
    "provider": "greenhouse",
    "slug": "roblox",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Pinterest",
    "provider": "greenhouse",
    "slug": "pinterest",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Discord",
    "provider": "greenhouse",
    "slug": "discord",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Okta",
    "provider": "greenhouse",
    "slug": "okta",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Twilio",
    "provider": "greenhouse",
    "slug": "twilio",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Elastic",
    "provider": "greenhouse",
    "slug": "elastic",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Brex",
    "provider": "greenhouse",
    "slug": "brex",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Flow Traders",
    "provider": "greenhouse",
    "slug": "flowtraders",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Spotify",
    "provider": "lever",
    "slug": "spotify",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 4,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Mistral AI",
    "provider": "lever",
    "slug": "mistral",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Cohere",
    "provider": "ashby",
    "slug": "cohere",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Perplexity",
    "provider": "ashby",
    "slug": "perplexity",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Instacart",
    "provider": "greenhouse",
    "slug": "instacart",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Pangram Labs",
    "provider": "ashby",
    "slug": "pangramlabs",
-   "tier": 4
+   "tier": 4,
+   "ratings": {
+    "pay": 2,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 2,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "LiteLLM",
    "provider": "ashby",
    "slug": "litellm",
-   "tier": 4
+   "tier": 4,
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Modal",
    "provider": "ashby",
    "slug": "modal",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": null
+   }
   },
   {
    "name": "Replit",
    "provider": "ashby",
    "slug": "replit",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Hex",
    "provider": "ashby",
    "slug": "hex",
-   "tier": 4
+   "tier": 4,
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Linear",
    "provider": "ashby",
    "slug": "linear",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Supabase",
    "provider": "ashby",
    "slug": "supabase",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Snyk",
    "provider": "ashby",
    "slug": "snyk",
-   "tier": 4
+   "tier": 4,
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 2,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Harvey",
    "provider": "ashby",
    "slug": "harvey",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Cognition",
    "provider": "ashby",
    "slug": "cognition",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 1,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Sierra",
    "provider": "ashby",
    "slug": "sierra",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Decagon",
    "provider": "ashby",
    "slug": "decagon",
-   "tier": 4
+   "tier": 4,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 1,
+    "exits": 3,
+    "sponsor": null
+   }
   },
   {
    "name": "Baseten",
    "provider": "ashby",
    "slug": "baseten",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "NVIDIA",
@@ -342,8 +744,15 @@
    "host": "nvidia.wd5.myworkdayjobs.com",
    "tenant": "nvidia",
    "site": "NVIDIAExternalCareerSite",
-   "tier": 2,
-   "search": "engineer"
+   "tier": 1,
+   "search": "engineer",
+   "ratings": {
+    "pay": 4,
+    "prestige": 5,
+    "wlb": 3,
+    "exits": 5,
+    "sponsor": true
+   }
   },
   {
    "name": "Salesforce",
@@ -352,7 +761,14 @@
    "tenant": "salesforce",
    "site": "External_Career_Site",
    "tier": 3,
-   "search": "engineer"
+   "search": "engineer",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Adobe",
@@ -361,7 +777,14 @@
    "tenant": "adobe",
    "site": "external_experienced",
    "tier": 3,
-   "search": "engineer"
+   "search": "engineer",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Capital One",
@@ -369,8 +792,15 @@
    "host": "capitalone.wd12.myworkdayjobs.com",
    "tenant": "capitalone",
    "site": "Capital_One",
-   "tier": 3,
-   "search": "software engineer"
+   "tier": 4,
+   "search": "software engineer",
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": true
+   }
   },
   {
    "name": "Mastercard",
@@ -378,8 +808,15 @@
    "host": "mastercard.wd1.myworkdayjobs.com",
    "tenant": "mastercard",
    "site": "CorporateCareers",
-   "tier": 3,
-   "search": "engineer"
+   "tier": 4,
+   "search": "engineer",
+   "ratings": {
+    "pay": 2,
+    "prestige": 2,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": true
+   }
   },
   {
    "name": "PayPal",
@@ -388,7 +825,14 @@
    "tenant": "paypal",
    "site": "jobs",
    "tier": 3,
-   "search": "engineer"
+   "search": "engineer",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Workday",
@@ -396,8 +840,15 @@
    "host": "workday.wd5.myworkdayjobs.com",
    "tenant": "workday",
    "site": "Workday",
-   "tier": 3,
-   "search": "engineer"
+   "tier": 4,
+   "search": "engineer",
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": true
+   }
   },
   {
    "name": "Cisco",
@@ -405,8 +856,15 @@
    "host": "cisco.wd5.myworkdayjobs.com",
    "tenant": "cisco",
    "site": "Cisco_Careers",
-   "tier": 3,
-   "search": "engineer"
+   "tier": 4,
+   "search": "engineer",
+   "ratings": {
+    "pay": 2,
+    "prestige": 2,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": true
+   }
   },
   {
    "name": "Snap",
@@ -415,459 +873,1019 @@
    "tenant": "snapchat",
    "site": "snap",
    "tier": 3,
-   "search": "engineer"
+   "search": "engineer",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Amazon",
    "provider": "amazon",
-   "tier": 2
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Google",
    "provider": "google",
-   "tier": 1
+   "tier": 1,
+   "ratings": {
+    "pay": 5,
+    "prestige": 5,
+    "wlb": 4,
+    "exits": 5,
+    "sponsor": true
+   }
   },
   {
    "name": "Apple",
    "provider": "apple",
-   "tier": 1
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 5,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "SpaceX",
    "provider": "greenhouse",
    "slug": "spacex",
-   "tier": 2
+   "tier": 3,
+   "ratings": {
+    "pay": 2,
+    "prestige": 5,
+    "wlb": 1,
+    "exits": 4,
+    "sponsor": false
+   }
   },
   {
    "name": "Tower Research Capital",
    "provider": "greenhouse",
    "slug": "towerresearchcapital",
-   "tier": 2
+   "tier": 2,
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Voleon",
    "provider": "lever",
    "slug": "voleon",
-   "tier": 2
+   "tier": 2,
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Wiz",
    "provider": "ashby",
    "slug": "wiz",
-   "tier": 2
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Waymo",
    "provider": "greenhouse",
    "slug": "waymo",
-   "tier": 2
+   "tier": 1,
+   "ratings": {
+    "pay": 5,
+    "prestige": 5,
+    "wlb": 4,
+    "exits": 5,
+    "sponsor": true
+   }
   },
   {
    "name": "Kraken",
    "provider": "lever",
    "slug": "kraken",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Ripple",
    "provider": "greenhouse",
    "slug": "ripple",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Clear Street",
    "provider": "greenhouse",
    "slug": "clearstreet",
-   "tier": 3
+   "tier": 4,
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Alpaca",
    "provider": "greenhouse",
    "slug": "alpaca",
-   "tier": 3
+   "tier": 4,
+   "ratings": {
+    "pay": 2,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 2,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Betterment",
    "provider": "greenhouse",
    "slug": "betterment",
-   "tier": 3
+   "tier": 4,
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Wealthfront",
    "provider": "lever",
    "slug": "wealthfront",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Klaviyo",
    "provider": "greenhouse",
    "slug": "klaviyo",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Fivetran",
    "provider": "greenhouse",
    "slug": "fivetran",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Duolingo",
    "provider": "greenhouse",
    "slug": "duolingo",
-   "tier": 3
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 4,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Toast",
    "provider": "greenhouse",
    "slug": "toast",
-   "tier": 3
+   "tier": 4,
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": true
+   }
   },
   {
    "name": "Lyft",
    "provider": "greenhouse",
    "slug": "lyft",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Webflow",
    "provider": "greenhouse",
    "slug": "webflow",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Verkada",
    "provider": "greenhouse",
    "slug": "verkada",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Samsara",
    "provider": "greenhouse",
    "slug": "samsara",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Vanta",
    "provider": "ashby",
    "slug": "vanta",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Drata",
    "provider": "ashby",
    "slug": "drata",
-   "tier": 3
+   "tier": 4,
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 2,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Rubrik",
    "provider": "greenhouse",
    "slug": "rubrik",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Tailscale",
    "provider": "greenhouse",
    "slug": "tailscale",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": null
+   }
   },
   {
    "name": "1Password",
    "provider": "ashby",
    "slug": "1password",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": null
+   }
   },
   {
    "name": "Zapier",
    "provider": "ashby",
    "slug": "zapier",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 5,
+    "exits": 3,
+    "sponsor": null
+   }
   },
   {
    "name": "Deel",
    "provider": "ashby",
    "slug": "deel",
-   "tier": 3
+   "tier": 4,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": null
+   }
   },
   {
    "name": "Miro",
    "provider": "ashby",
    "slug": "miro",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": null
+   }
   },
   {
    "name": "Cerebras",
    "provider": "ashby",
    "slug": "cerebras",
-   "tier": 3
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Etched",
    "provider": "ashby",
    "slug": "etched",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Tenstorrent",
    "provider": "greenhouse",
    "slug": "tenstorrent",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Lightmatter",
    "provider": "greenhouse",
    "slug": "lightmatter",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Shield AI",
    "provider": "lever",
    "slug": "shieldai",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": false
+   }
   },
   {
    "name": "Saronic",
    "provider": "ashby",
    "slug": "saronic",
-   "tier": 3
+   "tier": 4,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": false
+   }
   },
   {
    "name": "Skydio",
    "provider": "ashby",
    "slug": "skydio",
-   "tier": 3
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": false
+   }
   },
   {
    "name": "Archer Aviation",
    "provider": "greenhouse",
    "slug": "archer",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Apex Fintech",
    "provider": "greenhouse",
    "slug": "apex",
-   "tier": 3
+   "tier": 4,
+   "ratings": {
+    "pay": 2,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 2,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "CB Insights",
    "provider": "greenhouse",
    "slug": "cbinsights",
-   "tier": 3
+   "tier": 4,
+   "ratings": {
+    "pay": 2,
+    "prestige": 2,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": null
+   }
   },
   {
    "name": "Oura",
    "provider": "greenhouse",
    "slug": "oura",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": null
+   }
   },
   {
    "name": "Whoop",
    "provider": "lever",
    "slug": "whoop",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   }
   },
   {
    "name": "Strava",
    "provider": "ashby",
    "slug": "strava",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": null
+   }
   },
   {
    "name": "Midjourney",
    "provider": "ashby",
    "slug": "midjourney",
-   "tier": 4
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Character.AI",
    "provider": "ashby",
    "slug": "character",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Airbyte",
    "provider": "ashby",
    "slug": "airbyte",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   }
   },
   {
    "name": "D-Matrix",
    "provider": "ashby",
    "slug": "d-matrix",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "ClickUp",
    "provider": "ashby",
    "slug": "clickup",
-   "tier": 4
+   "tier": 4,
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 2,
+    "exits": 2,
+    "sponsor": null
+   }
   },
   {
    "name": "Meta",
    "provider": "browser",
    "source": "Meta",
-   "tier": 1
+   "tier": 1,
+   "ratings": {
+    "pay": 5,
+    "prestige": 5,
+    "wlb": 2,
+    "exits": 5,
+    "sponsor": true
+   }
   },
   {
    "name": "Microsoft",
    "provider": "browser",
    "source": "Microsoft",
-   "tier": 1
+   "tier": 1,
+   "ratings": {
+    "pay": 4,
+    "prestige": 5,
+    "wlb": 4,
+    "exits": 5,
+    "sponsor": true
+   }
   },
   {
    "name": "Netflix",
    "provider": "browser",
    "source": "Netflix",
-   "tier": 1
+   "tier": 1,
+   "ratings": {
+    "pay": 5,
+    "prestige": 5,
+    "wlb": 3,
+    "exits": 5,
+    "sponsor": true
+   }
   },
   {
    "name": "DRW",
    "provider": "greenhouse",
    "slug": "drweng",
-   "tier": 2
+   "tier": 2,
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Squarepoint Capital",
    "provider": "greenhouse",
    "slug": "squarepointcapital",
-   "tier": 2
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Rogo",
    "provider": "ashby",
    "slug": "rogo",
-   "tier": 3
+   "tier": 4,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Vercel",
    "provider": "greenhouse",
    "slug": "vercel",
-   "tier": 3
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   }
   },
   {
    "name": "CoreWeave",
    "provider": "greenhouse",
    "slug": "coreweave",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Glean",
    "provider": "greenhouse",
    "slug": "gleanwork",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Chime",
    "provider": "greenhouse",
    "slug": "chime",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Mercor",
    "provider": "ashby",
    "slug": "mercor",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Snorkel AI",
    "provider": "greenhouse",
    "slug": "snorkelai",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true,
+    "unsure": true
+   }
   },
   {
    "name": "LangChain",
    "provider": "ashby",
    "slug": "langchain",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Gusto",
    "provider": "greenhouse",
    "slug": "gusto",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Mercury",
    "provider": "greenhouse",
    "slug": "mercury",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true,
+    "unsure": true
+   }
   },
   {
    "name": "Squarespace",
    "provider": "greenhouse",
    "slug": "squarespace",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "ClickHouse",
    "provider": "ashby",
    "slug": "clickhouse",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true,
+    "unsure": true
+   }
   },
   {
    "name": "Asana",
    "provider": "greenhouse",
    "slug": "asana",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Bloomberg",
    "provider": "avature",
    "search": "https://bloomberg.avature.net/careers/SearchJobs",
-   "tier": 2
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 4,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Two Sigma",
    "provider": "avature",
    "search": "https://careers.twosigma.com/careers/OpenRoles",
-   "tier": 1
+   "tier": 1,
+   "ratings": {
+    "pay": 5,
+    "prestige": 5,
+    "wlb": 3,
+    "exits": 5,
+    "sponsor": true
+   }
   },
   {
    "name": "D. E. Shaw",
    "provider": "deshaw",
-   "tier": 1
+   "tier": 1,
+   "ratings": {
+    "pay": 5,
+    "prestige": 5,
+    "wlb": 3,
+    "exits": 5,
+    "sponsor": true
+   }
   },
   {
    "name": "DoorDash",
    "provider": "greenhouse",
    "slug": "doordashusa",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Five Rings",
    "provider": "greenhouse",
    "slug": "fiveringsllc",
-   "tier": 1
+   "tier": 2,
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "XTX Markets",
    "provider": "greenhouse",
    "slug": "xtxmarketstechnologies",
-   "tier": 1
+   "tier": 1,
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 4,
+    "exits": 4,
+    "sponsor": true,
+    "unsure": true
+   }
   },
   {
    "name": "Schonfeld",
    "provider": "greenhouse",
    "slug": "schonfeld",
-   "tier": 2
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true,
+    "unsure": true
+   }
   },
   {
    "name": "Bridgewater",
    "provider": "greenhouse",
    "slug": "bridgewater89",
-   "tier": 2
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "AQR",
    "provider": "greenhouse",
    "slug": "aqr",
-   "tier": 2
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "ExodusPoint",
    "provider": "greenhouse",
    "slug": "exoduspoint",
-   "tier": 2
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Bank of America",
@@ -875,8 +1893,15 @@
    "host": "ghr.wd1.myworkdayjobs.com",
    "tenant": "ghr",
    "site": "Lateral-US",
-   "tier": 3,
-   "search": "engineer"
+   "tier": 4,
+   "search": "engineer",
+   "ratings": {
+    "pay": 2,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 2,
+    "sponsor": true
+   }
   },
   {
    "name": "Citi",
@@ -884,8 +1909,15 @@
    "host": "citi.wd5.myworkdayjobs.com",
    "tenant": "citi",
    "site": "2",
-   "tier": 3,
-   "search": "engineer"
+   "tier": 4,
+   "search": "engineer",
+   "ratings": {
+    "pay": 2,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 2,
+    "sponsor": true
+   }
   },
   {
    "name": "BlackRock",
@@ -894,7 +1926,14 @@
    "tenant": "blackrock",
    "site": "BlackRock_Professional",
    "tier": 3,
-   "search": "engineer"
+   "search": "engineer",
+   "ratings": {
+    "pay": 3,
+    "prestige": 4,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Visa",
@@ -903,91 +1942,198 @@
    "tenant": "visa",
    "site": "Visa",
    "tier": 3,
-   "search": "engineer"
+   "search": "engineer",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "American Express",
    "provider": "oracle",
    "host": "egug.fa.us2.oraclecloud.com",
    "site": "CX_1",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Oracle",
    "provider": "oracle",
    "host": "eeho.fa.us2.oraclecloud.com",
    "site": "CX_45001",
-   "tier": 3
+   "tier": 4,
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "TikTok",
    "provider": "tiktok",
-   "tier": 2
+   "tier": 4,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 1,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Atlassian",
    "provider": "atlassian",
-   "tier": 3
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 4,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "FalconX",
    "provider": "greenhouse",
    "slug": "falconx",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null,
+    "unsure": true
+   }
   },
   {
    "name": "Match Group (Tinder)",
    "provider": "lever",
    "slug": "matchgroup",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Affirm",
    "provider": "greenhouse",
    "slug": "affirm",
-   "tier": 3
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "SeatGeek",
    "provider": "greenhouse",
    "slug": "seatgeek",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Veeva",
    "provider": "lever",
    "slug": "veeva",
-   "tier": 4
+   "tier": 4,
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": true
+   }
   },
   {
    "name": "Patreon",
    "provider": "ashby",
    "slug": "patreon",
-   "tier": 4
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Sprout Social",
    "provider": "greenhouse",
    "slug": "sproutsocial",
-   "tier": 4
+   "tier": 4,
+   "ratings": {
+    "pay": 2,
+    "prestige": 2,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": null
+   }
   },
   {
    "name": "Riot Games",
    "provider": "greenhouse",
    "slug": "riotgames",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "IXL Learning",
    "provider": "greenhouse",
    "slug": "ixllearning",
-   "tier": 4
+   "tier": 4,
+   "ratings": {
+    "pay": 2,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 2,
+    "sponsor": true
+   }
   },
   {
    "name": "Aylo",
    "provider": "greenhouse",
    "slug": "aylo",
-   "tier": 4
+   "tier": 4,
+   "ratings": {
+    "pay": 3,
+    "prestige": 1,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": false,
+    "unsure": true
+   }
   },
   {
    "name": "Wells Fargo",
@@ -996,7 +2142,14 @@
    "tenant": "wf",
    "site": "WellsFargoJobs",
    "tier": 4,
-   "search": "engineer"
+   "search": "engineer",
+   "ratings": {
+    "pay": 2,
+    "prestige": 2,
+    "wlb": 4,
+    "exits": 2,
+    "sponsor": true
+   }
   },
   {
    "name": "Zoom",
@@ -1005,7 +2158,14 @@
    "tenant": "zoom",
    "site": "Zoom",
    "tier": 3,
-   "search": "engineer"
+   "search": "engineer",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "DraftKings",
@@ -1014,7 +2174,14 @@
    "tenant": "draftkings",
    "site": "DraftKings",
    "tier": 3,
-   "search": "engineer"
+   "search": "engineer",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Intel",
@@ -1023,7 +2190,14 @@
    "tenant": "intel",
    "site": "External",
    "tier": 3,
-   "search": "engineer"
+   "search": "engineer",
+   "ratings": {
+    "pay": 2,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "Zillow",
@@ -1032,7 +2206,14 @@
    "tenant": "zillow",
    "site": "Zillow_Group_External",
    "tier": 3,
-   "search": "engineer"
+   "search": "engineer",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "CrowdStrike",
@@ -1040,8 +2221,15 @@
    "host": "crowdstrike.wd5.myworkdayjobs.com",
    "tenant": "crowdstrike",
    "site": "crowdstrikecareers",
-   "tier": 3,
-   "search": "engineer"
+   "tier": 2,
+   "search": "engineer",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "Vanguard",
@@ -1050,24 +2238,351 @@
    "tenant": "vanguard",
    "site": "vanguard_external",
    "tier": 4,
-   "search": "engineer"
+   "search": "engineer",
+   "ratings": {
+    "pay": 2,
+    "prestige": 2,
+    "wlb": 5,
+    "exits": 2,
+    "sponsor": null
+   }
   },
   {
    "name": "AMD",
    "provider": "jibe",
    "host": "careers.amd.com",
-   "tier": 3
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   }
   },
   {
    "name": "GitHub",
    "provider": "jibe",
    "host": "www.github.careers",
-   "tier": 2
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 4,
+    "exits": 4,
+    "sponsor": true
+   }
   },
   {
    "name": "DocuSign",
    "provider": "jibe",
    "host": "careers.docusign.com",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   }
+  },
+  {
+   "name": "Thinking Machines Lab",
+   "provider": "ashby",
+   "slug": "thinkingmachines",
+   "ratings": {
+    "pay": 5,
+    "prestige": 5,
+    "wlb": 2,
+    "exits": 5,
+    "sponsor": true
+   },
+   "tier": 1
+  },
+  {
+   "name": "Together AI",
+   "provider": "greenhouse",
+   "slug": "togetherai",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Fireworks AI",
+   "provider": "ashby",
+   "slug": "fireworks",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Anyscale",
+   "provider": "lever",
+   "slug": "anyscale",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Runway",
+   "provider": "ashby",
+   "slug": "runway",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 2
+  },
+  {
+   "name": "ElevenLabs",
+   "provider": "ashby",
+   "slug": "elevenlabs",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "SambaNova Systems",
+   "provider": "greenhouse",
+   "slug": "sambanovasystems",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Lambda",
+   "provider": "ashby",
+   "slug": "lambda",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Pinecone",
+   "provider": "ashby",
+   "slug": "pinecone",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Figure AI",
+   "provider": "greenhouse",
+   "slug": "figureai",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 1,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Physical Intelligence",
+   "provider": "ashby",
+   "slug": "physicalintelligence",
+   "ratings": {
+    "pay": 5,
+    "prestige": 5,
+    "wlb": 2,
+    "exits": 5,
+    "sponsor": true
+   },
+   "tier": 1
+  },
+  {
+   "name": "Abridge",
+   "provider": "ashby",
+   "slug": "abridge",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Airtable",
+   "provider": "greenhouse",
+   "slug": "airtable",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Benchling",
+   "provider": "ashby",
+   "slug": "benchling",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Nuro",
+   "provider": "greenhouse",
+   "slug": "nuro",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Zoox",
+   "provider": "lever",
+   "slug": "zoox",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 2
+  },
+  {
+   "name": "Gemini",
+   "provider": "greenhouse",
+   "slug": "gemini",
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 2,
+    "sponsor": true
+   },
+   "tier": 4
+  },
+  {
+   "name": "Paxos",
+   "provider": "ashby",
+   "slug": "paxos",
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   },
+   "tier": 4
+  },
+  {
+   "name": "PDT Partners",
+   "provider": "greenhouse",
+   "slug": "pdtpartners",
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 4,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 1
+  },
+  {
+   "name": "Old Mission Capital",
+   "provider": "greenhouse",
+   "slug": "oldmissioncapital",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "WorldQuant",
+   "provider": "greenhouse",
+   "slug": "worldquant",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Cockroach Labs",
+   "provider": "greenhouse",
+   "slug": "cockroachlabs",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 4,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 2
+  },
+  {
+   "name": "Grafana Labs",
+   "provider": "greenhouse",
+   "slug": "grafanalabs",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 5,
+    "exits": 3,
+    "sponsor": true
+   },
    "tier": 3
   },
   {
@@ -1319,5 +2834,6 @@
   "4": 0
  },
  "min_pay": 150000,
- "max_age_days": 60
+ "max_age_days": 60,
+ "ratings_note": "pay, prestige, wlb (work-life balance), exits (exit opportunities), 1-5, and sponsor (usually sponsors H-1B) are estimates by Claude Fable 5.1 on Oct 18 2026 from general knowledge, not measured data. Tier = sum of the four scores: 17+ tier 1, 15-16 tier 2, 12-14 tier 3, else 4."
 }

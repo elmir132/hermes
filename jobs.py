@@ -815,7 +815,21 @@ def required_years(text: str):
     return int(m.group(1) or m.group(2)) if m else None
 
 
-def visa_flags(text: str) -> list:
+def rating_label(ratings) -> str:
+    """' · pay 5 · prestige 5 · WLB 3 · exits 5' from the company's estimated ratings, or '' when there are none."""
+    if not isinstance(ratings, dict):
+        return ""
+    parts = [f"{label} {ratings[key]}" for key, label in (("pay", "pay"), ("prestige", "prestige"), ("wlb", "WLB"), ("exits", "exits"))]
+    return " · " + " · ".join(parts) if all(isinstance(ratings.get(k), int) for k in ("pay", "prestige", "wlb", "exits")) else ""
+
+
+def tier_from_ratings(ratings: dict) -> int:
+    """Tier 1-4 from the sum of the four 1-5 scores (equal weight): 17+ is 1, 15-16 is 2, 12-14 is 3, else 4."""
+    total = sum(ratings[k] for k in ("pay", "prestige", "wlb", "exits"))
+    return 1 if total >= 17 else 2 if total >= 15 else 3 if total >= 12 else 4
+
+
+def visa_flags(text: str, ratings=None) -> list:
     flags = []
     if CITIZEN_ONLY.search(text):
         flags.append("⚠️ citizenship or clearance required")
@@ -823,7 +837,14 @@ def visa_flags(text: str) -> list:
         flags.append("⚠️ says no sponsorship")
     if SPONSORS.search(text) and not flags:
         flags.append("✅ mentions sponsorship")
-    return flags or ["visa: not stated"]
+    if flags:
+        return flags
+    known = (ratings or {}).get("sponsor") if isinstance(ratings, dict) else None
+    if known is True:
+        return ["visa: not stated (the company usually sponsors; estimate)"]
+    if known is False:
+        return ["visa: not stated (the company rarely sponsors; estimate)"]
+    return ["visa: not stated"]
 
 
 def age_days(job: dict, now=None):
@@ -934,6 +955,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 continue
         for job in found:
             job["tier"] = company.get("tier", 0)
+            job["ratings"] = company.get("ratings")
             scored = score_job(job, cfg, now)
             if scored:
                 job["score"], job["reasons"] = scored
@@ -992,7 +1014,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
         if job.get("details_checked") is False:
             job["flags"] = ["posting details not read; location, pay, visa, experience unchecked"]
         else:
-            job["flags"] = [pay_label(job["pay"])] + visa_flags(job["text"]) + ([f"asks for {years}+ years"] if years and years >= 3 else [])
+            job["flags"] = [pay_label(job["pay"])] + visa_flags(job["text"], job.get("ratings")) + ([f"asks for {years}+ years"] if years and years >= 3 else [])
         shown.append((provider, slug, job))
         per_company[job["company"]] = per_company.get(job["company"], 0) + 1
     if mark:
@@ -1008,7 +1030,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
         where = j["location"] if len(j["location"]) <= 60 else j["location"][:57] + "..."
         if j.get("location_verified") is False:
             where += " (search filter; listing location unverified)"
-        tier = f"  [tier {j['tier']}]" if j.get("tier") else ""
+        tier = f"  [tier {j['tier']}{rating_label(j.get('ratings'))}]" if j.get("tier") else ""
         posted = f" · posted {j['age']}d ago" if j.get("age") is not None else ""
         lines.append(f"\n• {j['company']}{tier}: {j['title']}  #{n}\n  {where}{' (remote ok)' if j['remote'] else ''}{posted}\n  {'; '.join(j['flags'])}\n  {j['url']}")
     lines.append("\nVisa and experience notes are only hints from the posting text. Read the posting before relying on them.")
