@@ -2586,6 +2586,12 @@
    "tier": 3
   },
   {
+   "name": "Applied Intuition",
+   "provider": "ashby",
+   "slug": "applied",
+   "tier": 2
+  },
+  {
    "name": "Hacker News: Who is hiring",
    "provider": "hn",
    "tier": 3
