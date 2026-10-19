@@ -24,6 +24,7 @@ import campus
 import digest
 import jobs
 import luma
+import signin
 
 # ── Markdown → Telegram HTML ──────────────────────────────────────────────────
 def md_to_html(text: str) -> str:
@@ -419,21 +420,26 @@ _GCAL_API  = "https://www.googleapis.com/calendar/v3"
 _GMAIL_API = "https://gmail.googleapis.com/gmail/v1"
 
 def _load_creds(token_path: Path):
-    if not token_path.exists():
-        return None
-    try:
-        from google.oauth2.credentials import Credentials
-        from google.auth.transport.requests import Request
-        creds = Credentials.from_authorized_user_file(str(token_path), _GOOGLE_SCOPES)
-        if creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-            try:
-                token_path.write_text(creds.to_json())   # cache refresh — non-fatal if disk is read-only
-            except Exception:
-                pass
-        return creds if creds.valid else None
-    except Exception:
-        return None
+    """Valid credentials or None. A refreshed token is saved atomically (signin.save_atomic)."""
+    return signin.load(token_path, _GOOGLE_SCOPES)[0]
+
+
+def _creds_health() -> dict:
+    """{account: None if it works, else 'expired' / 'transient' / 'broken'}."""
+    return {(p.stem.replace("token_", "") or p.stem): signin.load(p, _GOOGLE_SCOPES)[1] for p in _all_token_files()}
+
+
+SIGNIN_STATE = _HERE / "signin_state.json"      # which accounts were already reported broken (kept out of git)
+
+
+async def _check_signins():
+    """Tell the owner once when a Google sign-in stops working, and once when it works again."""
+    health = await asyncio.to_thread(_creds_health)
+    newly, recovered = signin.AlertState(SIGNIN_STATE).changes(health)
+    text = signin.alert_text(newly, recovered, working=[n for n, p in health.items() if p is None])
+    if text:
+        await bot.send_message(ALLOWED_USER, text)
+    return health
 
 def _all_token_files() -> list[Path]:
     """Return all token_*.json files in bot directory."""
@@ -481,7 +487,9 @@ def _creds_diag() -> list[str]:
                     line += f"  [Gmail ping err: {str(ee)[:40]}]"
             out.append(line)
         except Exception as e:
-            out.append(f"❌ {name}: {str(e)[:70]}")
+            kind = signin.classify(e)
+            hint = {"expired": "needs signing in again", "transient": "network problem, try again later"}.get(kind, str(e)[:70])
+            out.append(f"❌ {name}: {hint}")
     return out or ["❌ no token files"]
 
 async def calendar_get_events(days: int = 7) -> str:
@@ -1505,13 +1513,18 @@ async def run_digest(mark: bool = True, include_seen: bool = False) -> str:
 
 async def _digest_loop():
     await asyncio.sleep(30)
+    try:
+        await _check_signins()                              # right after a restart, so a dead sign-in is not a surprise at 8 AM
+    except Exception as exc:
+        print(f"[digest] sign-in check failed: {type(exc).__name__}: {exc}")
     while True:
         await asyncio.sleep(digest.seconds_until(DIGEST_HOUR))
         try:
-            if await asyncio.to_thread(_all_creds):          # stay quiet while Google sign-ins are expired
+            health = await _check_signins()                 # says once when an account needs signing in again
+            if any(problem is None for problem in health.values()):
                 await bot.send_message(ALLOWED_USER, "📬 Morning digest\n\n" + await run_digest(mark=True))
-        except Exception:
-            pass
+        except Exception as exc:                            # logged to the service journal instead of vanishing
+            print(f"[digest] failed: {type(exc).__name__}: {exc}")
         await asyncio.sleep(60)
 
 @dp.message(Command("digest"))
