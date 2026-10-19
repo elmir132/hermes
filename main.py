@@ -1522,11 +1522,11 @@ async def cmd_digest(msg: Message):
     await msg.answer(await run_digest(mark=False, include_seen=show_all))
 
 # ── Job watcher (public feeds plus Google / Apple search pages, no logins) ─────
-async def _jobs_get(url, body=None):
-    """GET, or POST when a JSON body is given (Workday's job lists use POST)."""
+async def _jobs_get(url, body=None, headers=None):
+    """GET, or POST when a JSON body is given (Workday's job lists use POST). `headers` adds site-required ones."""
     for attempt in range(2):                               # one retry for a dropped connection or a server hiccup
         try:
-            async with httpx.AsyncClient(timeout=25, headers={"User-Agent": "hermes-job-watcher/1.0"}) as client:
+            async with httpx.AsyncClient(timeout=25, headers={"User-Agent": "hermes-job-watcher/1.0", **(headers or {})}) as client:
                 r = await (client.post(url, json=body) if body is not None else client.get(url))
             if r.status_code >= 500 and attempt == 0:
                 await asyncio.sleep(2)

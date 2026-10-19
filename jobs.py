@@ -1,7 +1,7 @@
 """Daily job watcher for public job-board feeds and first-page Google/Apple search results.
 
 Greenhouse, Lever and Ashby expose public job feeds. Google and Apple are read from their public search pages
-using a separate HTML-only fetch; Bloomberg and Two Sigma (Avature search pages) and D. E. Shaw (JSON embedded in its careers page) are read the same way; Oracle Recruiting sites (Oracle, American Express) through their public job API. No login or model call is used by the watcher; plain rules match titles and
+using a separate HTML-only fetch; Bloomberg and Two Sigma (Avature search pages) and D. E. Shaw (JSON embedded in its careers page) are read the same way; Oracle Recruiting sites (Oracle, American Express), TikTok and Atlassian through the public job APIs their careers pages use. No login or model call is used by the watcher; plain rules match titles and
 locations, so posting text cannot steer it. It never applies to anything. Search-page roles are only listings:
 their descriptions, pay, visa terms and experience requirements are not checked.
 """
@@ -45,6 +45,10 @@ DESHAW_URL = "https://www.deshaw.com/careers"
 ORACLE_QUERIES = ["software engineer", "machine learning"]
 ORACLE_PAGE = 100           # Oracle Recruiting returns at most 100 per request
 ORACLE_PAGES = 3
+TIKTOK_SEARCH = "https://api.lifeattiktok.com/api/v1/public/supplier/search/job/posts"
+TIKTOK_NYC = "CT_114"        # TikTok's own location code for New York
+TIKTOK_QUERIES = ["engineer", "machine learning", "data scientist"]
+ATLASSIAN_LISTINGS = "https://www.atlassian.com/endpoint/careers/listings"
 CONCURRENCY = 4
 BROWSER_FILE = Path(__file__).parent / "browser_jobs.json"      # written daily by browser_reader.py on the Mac
 BROWSER_STALE_DAYS = 3
@@ -508,6 +512,67 @@ async def fetch_oracle(company: dict, get_json):
     return found, ("; ".join(dict.fromkeys(errors)) if errors else None)
 
 
+def tiktok_jobs(posts: list, company: str = "TikTok") -> list:
+    out = []
+    for raw in posts if isinstance(posts, list) else []:
+        jid, title = str(raw.get("id") or ""), _clean(raw.get("title") or "")
+        if not jid.isdigit() or not title:
+            continue
+        city = (raw.get("city_info") or {}).get("en_name") or ""
+        kind = raw.get("recruit_type") or {}
+        text = _clean(f"{raw.get('description') or ''} {raw.get('requirement') or ''}")
+        out.append({"key": f"tiktok:{jid}", "company": company, "title": title, "location": city, "location_verified": bool(city),
+                    "remote": False, "url": f"https://lifeattiktok.com/search/{jid}", "published": "", "text": text,
+                    "employment": kind.get("en_name", "") if isinstance(kind, dict) else str(kind),
+                    "pay": pay_from_text(text), "details_checked": bool(text)})
+    return out
+
+
+async def fetch_tiktok(company: dict, get_json):
+    """TikTok's public job search (the API its careers site calls), New York only, up to three pages per query."""
+    found, seen, errors = [], set(), []
+    for query in company.get("queries", TIKTOK_QUERIES):
+        for page in range(3):
+            body = {"keyword": query, "limit": 100, "offset": page * 100, "job_category_id_list": [],
+                    "location_code_list": [company.get("location_code", TIKTOK_NYC)], "subject_id_list": [],
+                    "recruitment_id_list": [], "portal_type": 4, "job_function_id_list": [], "portal_entrance": 1}
+            status, data = await get_json(TIKTOK_SEARCH, body, headers={"website-path": "tiktok"})
+            block = (data or {}).get("data") if isinstance(data, dict) else None
+            if status != 200 or not isinstance(block, dict):
+                errors.append(f"HTTP {status}")
+                break
+            posts = block.get("job_post_list") or []
+            for job in tiktok_jobs(posts, company.get("name", "TikTok")):
+                if job["key"] not in seen:
+                    seen.add(job["key"])
+                    found.append(job)
+            if len(posts) < 100 or (page + 1) * 100 >= (block.get("count") or 0):
+                break
+    return found, ("; ".join(dict.fromkeys(errors)) if errors else None)
+
+
+def atlassian_jobs(listings: list, company: str = "Atlassian") -> list:
+    out = []
+    for raw in listings if isinstance(listings, list) else []:
+        jid, title = str(raw.get("id") or ""), _clean(raw.get("title") or "")
+        if not jid.isdigit() or not title:
+            continue
+        places = [re.sub(r"\s+", " ", str(x)).strip() for x in raw.get("locations") or []]
+        text = _clean(" ".join(str(raw.get(k) or "") for k in ("overview", "responsibilities", "qualifications", "payRanges")))
+        out.append({"key": f"atlassian:{jid}", "company": company, "title": title, "location": "; ".join(places),
+                    "location_verified": bool(places), "remote": any(x.lower().startswith("remote") for x in places),
+                    "url": f"https://www.atlassian.com/company/careers/details/{jid}", "published": "", "text": text,
+                    "employment": "", "pay": pay_from_text(text), "details_checked": bool(text)})
+    return out
+
+
+async def fetch_atlassian(company: dict, get_json):
+    status, data = await get_json(ATLASSIAN_LISTINGS)
+    if status != 200 or not isinstance(data, list):
+        return [], f"HTTP {status}"
+    return atlassian_jobs(data, company.get("name", "Atlassian")), None
+
+
 def browser_jobs(company: dict, cfg: dict, now=None, path=None):
     """Reads browser_jobs.json (made by browser_reader.py). Returns (jobs, error_or_None)."""
     path = Path(path or company.get("file") or BROWSER_FILE)
@@ -745,6 +810,10 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 found, err = await fetch_amazon(dict(company, name=name), get_json)
             elif provider == "workday":
                 found, err = await fetch_workday(dict(company, name=name), get_json, now)
+            elif provider == "tiktok":
+                found, err = await fetch_tiktok(dict(company, name=name), get_json)
+            elif provider == "atlassian":
+                found, err = await fetch_atlassian(dict(company, name=name), get_json)
             elif provider == "oracle":
                 found, err = await fetch_oracle(dict(company, name=name), get_json)
             elif provider in ("avature", "deshaw"):

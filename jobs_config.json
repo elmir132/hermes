@@ -920,6 +920,103 @@
    "tier": 3
   },
   {
+   "name": "TikTok",
+   "provider": "tiktok",
+   "tier": 2
+  },
+  {
+   "name": "Atlassian",
+   "provider": "atlassian",
+   "tier": 3
+  },
+  {
+   "name": "FalconX",
+   "provider": "greenhouse",
+   "slug": "falconx",
+   "tier": 3
+  },
+  {
+   "name": "Match Group (Tinder)",
+   "provider": "lever",
+   "slug": "matchgroup",
+   "tier": 3
+  },
+  {
+   "name": "Affirm",
+   "provider": "greenhouse",
+   "slug": "affirm",
+   "tier": 3
+  },
+  {
+   "name": "SeatGeek",
+   "provider": "greenhouse",
+   "slug": "seatgeek",
+   "tier": 3
+  },
+  {
+   "name": "Veeva",
+   "provider": "lever",
+   "slug": "veeva",
+   "tier": 4
+  },
+  {
+   "name": "Patreon",
+   "provider": "ashby",
+   "slug": "patreon",
+   "tier": 4
+  },
+  {
+   "name": "Sprout Social",
+   "provider": "greenhouse",
+   "slug": "sproutsocial",
+   "tier": 4
+  },
+  {
+   "name": "Riot Games",
+   "provider": "greenhouse",
+   "slug": "riotgames",
+   "tier": 3
+  },
+  {
+   "name": "IXL Learning",
+   "provider": "greenhouse",
+   "slug": "ixllearning",
+   "tier": 4
+  },
+  {
+   "name": "Aylo",
+   "provider": "greenhouse",
+   "slug": "aylo",
+   "tier": 4
+  },
+  {
+   "name": "Wells Fargo",
+   "provider": "workday",
+   "host": "wf.wd1.myworkdayjobs.com",
+   "tenant": "wf",
+   "site": "WellsFargoJobs",
+   "tier": 4,
+   "search": "engineer"
+  },
+  {
+   "name": "Zoom",
+   "provider": "workday",
+   "host": "zoom.wd5.myworkdayjobs.com",
+   "tenant": "zoom",
+   "site": "Zoom",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
+   "name": "DraftKings",
+   "provider": "workday",
+   "host": "draftkings.wd1.myworkdayjobs.com",
+   "tenant": "draftkings",
+   "site": "DraftKings",
+   "tier": 3,
+   "search": "engineer"
+  },
+  {
    "name": "Hacker News: Who is hiring",
    "provider": "hn",
    "tier": 3
