@@ -36,7 +36,7 @@ box(5.9, 0.45, 5.25, 1.5, AMBER, "Tools", "Google Calendar and Gmail (OAuth 2.0)
 for y in (4.35, 2.85, 1.2):
     arrow(5.05, 2.75, 5.85, y)
 
-ax.text(0.25, 1.35, "Daily jobs: email digest (8 AM) and a job watcher\nover public Greenhouse, Lever and Ashby feeds", fontsize=9, color=MUTED, va="top", linespacing=1.5)
+ax.text(0.25, 1.35, "Daily jobs: email digest (8 AM) and a job watcher\nover ~190 public job boards (NYC, Bay Area, US remote)", fontsize=9, color=MUTED, va="top", linespacing=1.5)
 ax.text(5.7, 0.05, "One Linux server, supervised by systemd · memory in a single SQLite file · free-tier API quotas",
         ha="center", fontsize=9, color=MUTED)
 out = Path(__file__).resolve().parent / "architecture.png"
