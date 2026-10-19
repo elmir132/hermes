@@ -51,6 +51,7 @@ TIKTOK_PLACES = ["CT_114", "CT_1103355"]
 TIKTOK_QUERIES = ["engineer", "machine learning", "data scientist"]
 ATLASSIAN_LISTINGS = "https://www.atlassian.com/endpoint/careers/listings"
 JIBE_QUERIES = ["software engineer", "machine learning"]
+GEM = "https://api.gem.com/job_board/v0/{slug}/job_posts/"     # Gem's documented public Job Board API (Greenhouse-shaped)
 CONCURRENCY = 4
 BROWSER_FILE = Path(__file__).parent / "browser_jobs.json"      # written daily by browser_reader.py on the Mac
 BROWSER_STALE_DAYS = 3
@@ -652,6 +653,28 @@ async def fetch_jibe(company: dict, get_json):
     return found, ("; ".join(dict.fromkeys(errors)) if errors else None)
 
 
+def gem_jobs(posts, company: str) -> list:
+    """Gem returns Greenhouse-shaped posts that already include the plain-text description."""
+    out = []
+    for raw in posts if isinstance(posts, list) else []:
+        if not isinstance(raw, dict) or not raw.get("id") or not str(raw.get("absolute_url", "")).startswith("https://jobs.gem.com/"):
+            continue
+        job = normalize("greenhouse", dict(raw, location=raw.get("location") or {"name": ""}), company)
+        text = _clean(raw.get("content_plain") or "")
+        job.update(key=f"gem:{company}:{raw['id']}", text=text, details_checked=bool(text),
+                   employment=str(raw.get("employment_type") or "").replace("_", " "), pay=pay_from_text(text))
+        job.pop("gh_id", None)
+        out.append(job)
+    return [j for j in out if j["title"]]
+
+
+async def fetch_gem(company: dict, get_json):
+    status, data = await get_json(GEM.format(slug=company["slug"]))
+    if status != 200 or not isinstance(data, list):
+        return [], f"HTTP {status}"
+    return gem_jobs(data, company.get("name", company["slug"])), None
+
+
 def browser_jobs(company: dict, cfg: dict, now=None, path=None):
     """Reads browser_jobs.json (made by browser_reader.py). Returns (jobs, error_or_None)."""
     path = Path(path or company.get("file") or BROWSER_FILE)
@@ -915,6 +938,8 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 found, err = await fetch_amazon(dict(company, name=name), get_json)
             elif provider == "workday":
                 found, err = await fetch_workday(dict(company, name=name), get_json, now)
+            elif provider == "gem":
+                found, err = await fetch_gem(dict(company, name=name), get_json)
             elif provider == "jibe":
                 found, err = await fetch_jibe(dict(company, name=name), get_json)
             elif provider == "tiktok":

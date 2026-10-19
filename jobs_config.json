@@ -2625,6 +2625,45 @@
    "tier": 2
   },
   {
+   "name": "Retool",
+   "provider": "gem",
+   "slug": "retool",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Groq",
+   "provider": "gem",
+   "slug": "groq",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 3
+  },
+  {
+   "name": "Radix Trading",
+   "provider": "greenhouse",
+   "slug": "radixuniversity",
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 2
+  },
+  {
    "name": "Hacker News: Who is hiring",
    "provider": "hn",
    "tier": 3
