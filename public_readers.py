@@ -363,6 +363,8 @@ async def fetch_sitemap(company, cfg, public, seen_path=None):
     found = []
     for url in urls[:DETAIL_CAP]:
         status, page = await public.text(url)
+        if status in (404, 410):
+            continue          # the sitemap still lists a posting that was taken down; not a source failure
         if status != 200:
             return found, f'posting HTTP {status}'
         if company.get('parser') == 'boozallen':
@@ -392,9 +394,10 @@ async def fetch_intuit(company, cfg, public, seen_path=None):
     found = {}
     # One page per query, then two complete descriptions in total.
     for query in company.get('queries', ('software engineer 1', 'machine learning engineer'))[:2]:
-        status, page = await public.text('https://jobs.intuit.com/search-jobs?' + urlencode({'k':query, 'p':1}))
+        url = 'https://jobs.intuit.com/search-jobs?' + urlencode({'k':query, 'p':1})
+        status, page = await public.text(url)
         if status != 200:
-            return [], f'search HTTP {status}'
+            return [], public_error(public, url, f'search HTTP {status}')
         rows = intuit_jobs(page, company['name'])
         if not rows:
             return [], 'search omitted job cards'
@@ -408,7 +411,7 @@ async def fetch_intuit(company, cfg, public, seen_path=None):
     for job in candidates[:DETAIL_CAP]:
         status, page = await public.text(job['url'])
         if status != 200:
-            return complete, f'posting HTTP {status}'
+            return complete, public_error(public, job['url'], f'posting HTTP {status}')
         detail = parse_schema_job(page, job['url'], company['name'])
         if detail is None or not detail['text']:
             return complete, 'posting omitted JobPosting description'
@@ -477,10 +480,11 @@ async def read(company, cfg, public, seen_path=None):
         if company["provider"] == "teamtailor_rss":
             return await fetch_teamtailor(company, public)
         return await fetch_sitemap(company, cfg, public, seen_path)
+    budget = 60 if company['provider'] == 'intuit' else 20
     try:
-        return await asyncio.wait_for(run(), timeout=20)
+        return await asyncio.wait_for(run(), timeout=budget)
     except TimeoutError:
-        return [], 'public source exceeded 20-second budget'
+        return [], f'public source exceeded {budget}-second budget'
 
 
 def teamtailor_jobs(page, company):
@@ -669,3 +673,43 @@ async def fetch_recruitee(company, public):
         return recruitee_jobs(data, company), None
     except (ValueError, TypeError):
         return [], 'invalid public offers'
+
+
+def public_error(public, url, message):
+    """Keep HTTP status and, for HTTP 0, the transport/policy failure category."""
+    reason = getattr(public, 'failures', {}).get(url)
+    return f"{message} ({reason})" if reason else message
+
+
+async def fetch_paced_workday(company, cfg, public, now=None, seen_path=None):
+    """Paced lists with configured page caps, then at most three details.
+
+    The caller supplies a dedicated, robots-aware client and a 60s deadline.
+    No retry after a 429, including responses carrying Retry-After: stop this
+    scan and let the next daily scan try again with the smaller request load.
+    """
+    from jobs import fetch_workday, _html_text, pay_from_text
+    last_url = None
+    async def listing(url, body=None):
+        nonlocal last_url
+        last_url = url
+        return await public.json(url, body)
+    found, error = await fetch_workday(company, listing, now)
+    if error:
+        return found, public_error(public, last_url, error)
+    candidates = [j for j in found if score_job(dict(j, tier=company.get('tier', 0)), cfg, now)]
+    old = seen_keys(seen_path, [j['key'] for j in candidates]) if seen_path is not None else set()
+    candidates = [j for j in candidates if j['key'] not in old]
+    candidates.sort(key=lambda j: (-score_job(dict(j, tier=company.get('tier', 0)), cfg, now)[0], j['title']))
+    base = f"https://{company['host']}/wday/cxs/{company['tenant']}/{company['site']}"
+    for job in candidates[:3]:
+        url = base + job['wd_path']
+        status, data = await public.json(url)
+        info = data.get('jobPostingInfo', {}) if isinstance(data, dict) else {}
+        if status != 200 or not info.get('jobDescription'):
+            return found, public_error(public, url, f'posting unavailable (HTTP {status})')
+        job['text'] = _html_text(info['jobDescription'])
+        job['employment'] = info.get('timeType', '')
+        job['details_checked'] = True
+        job['pay'] = pay_from_text(job['text'])
+    return found, None

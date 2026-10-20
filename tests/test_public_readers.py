@@ -195,3 +195,36 @@ class PublicPostTests(unittest.TestCase):
         client = PublicJobsClient(raw, pause=0)
         asyncio.run(client.json('https://example.org/jobs', {}))
         self.assertEqual(calls, [('https://example.org/robots.txt', None), ('https://example.org/jobs', {})])
+
+
+class StaleLinkAndEmptyPageTests(unittest.TestCase):
+    """One removed posting or one empty search page is normal and must not fail the whole source."""
+
+    def test_a_removed_posting_in_the_sitemap_is_skipped(self):
+        company = {'name':'Example', 'provider':'sitemap_jobs', 'sitemap_url':'https://example.org/sitemap.xml', 'job_path':'/job/'}
+        urls = ['https://example.org/job/software-engineer-gone', 'https://example.org/job/software-engineer-live']
+        sitemap = '<urlset>' + ''.join('<url><loc>' + u + '</loc></url>' for u in urls) + '</urlset>'
+        schema = '<script type="application/ld+json">' + json.dumps({'@type':'JobPosting','title':'Software Engineer','description':'Build software','jobLocation':{'address':{'addressLocality':'New York','addressCountry':'US'}}}) + '</script>'
+        class Client:
+            def __init__(self, dead_status): self.dead_status = dead_status
+            async def text(self, url):
+                if url.endswith('sitemap.xml'): return 200, sitemap
+                return (self.dead_status, '') if url.endswith('-gone') else (200, schema)
+        for dead in (404, 410):
+            found, err = asyncio.run(readers.fetch_sitemap(company, CFG, Client(dead)))
+            self.assertIsNone(err)
+            self.assertEqual([j['title'] for j in found], ['Software Engineer'])
+        found, err = asyncio.run(readers.fetch_sitemap(company, CFG, Client(500)))
+        self.assertEqual(err, 'posting HTTP 500')                    # a server error is still reported
+
+    def test_apple_reports_only_when_every_results_page_is_empty(self):
+        company = {'name':'Apple', 'locations':{'new-york-city-NYC':'New York'}, 'queries':['software engineer', 'machine learning']}
+        async def get_html(url): return 200, '<html></html>'
+        role = {'url':'https://jobs.apple.com/en-us/details/1', 'title':'Software Engineer'}
+        with patch.object(jobs, 'parse_apple_html', side_effect=[[], [role]]):
+            found, err = asyncio.run(jobs.fetch_apple(company, get_html, CFG))
+        self.assertEqual((len(found), err), (1, None))
+        with patch.object(jobs, 'parse_apple_html', return_value=[]):
+            found, err = asyncio.run(jobs.fetch_apple(company, get_html, CFG))
+        self.assertEqual(found, [])
+        self.assertIn('layout may have changed', err)

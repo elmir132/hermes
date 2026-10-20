@@ -762,6 +762,8 @@
    "site": "External_Career_Site",
    "tier": 3,
    "search": "engineer",
+   "paced": true,
+   "page_cap": 2,
    "ratings": {
     "pay": 3,
     "prestige": 3,

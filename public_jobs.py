@@ -64,6 +64,8 @@ class PublicJobsClient:
         self.last = {}
         self.stopped = set()
         self.requests = []
+        self.failures = {}
+        self.policy_failures = {}
 
     async def _raw(self, url, body=None):
         from urllib import error, request
@@ -99,7 +101,11 @@ class PublicJobsClient:
             await asyncio.sleep(max(0, delay - (time.monotonic() - self.last.get(origin, 0))))
             try:
                 result = await self.raw(url) if body is None else await self.raw(url, body)
-            except Exception:
+            except Exception as exc:
+                # Category only: exception messages may contain URLs or local paths.
+                nested = getattr(exc, 'reason', None)
+                reason = nested if isinstance(nested, BaseException) else exc
+                self.failures[url] = f'transport {type(reason).__name__}'
                 result = (0, {}, '')
             self.last[origin] = time.monotonic()
             self.cache[key] = result
@@ -135,6 +141,8 @@ class PublicJobsClient:
             if status == 200 and not self._challenge(policy):
                 return policy
             break
+        reason = self.failures.get(url)
+        self.policy_failures[origin] = f'robots.txt HTTP {status}' + (f' ({reason})' if reason else '')
         return 'User-agent: *\nDisallow: /'
 
     async def text(self, url, depth=0, body=None):
@@ -143,6 +151,7 @@ class PublicJobsClient:
             self.policies[origin] = robots_policy(await self._robots(origin))
         parser, groups = self.policies[origin]
         if not parser.can_fetch(USER_AGENT, url) or any(not p.can_fetch(USER_AGENT, url) for p in groups):
+            self.failures[url] = self.policy_failures.get(origin, 'robots.txt disallows this path')
             return 0, ''
         delay = max(self.pause, parser.crawl_delay(USER_AGENT) or 0)
         status, headers, response = await self._request(url, delay, body)

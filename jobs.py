@@ -249,21 +249,24 @@ async def fetch_workday(company: dict, get_json, now=None):
             status, data = await get_json(base + "/jobs", {"appliedFacets": applied, "limit": WORKDAY_PAGE, "offset": page * WORKDAY_PAGE,
                                                            "searchText": company.get("search", "")})
             if status != 200 or not isinstance(data, dict):
-                break
+                return got, f"listing HTTP {status}"
             batch = data.get("jobPostings", [])
             got += batch
             if len(batch) < WORKDAY_PAGE or (page + 1) * WORKDAY_PAGE >= data.get("total", 0):
                 break
-        return got
+        return got, None
 
     found, seen = [], set()
     groups = ([(ids, WORKDAY_PAGES, "New York")] if ids else []) + \
              [({facet: values}, WORKDAY_EXTRA_PAGES, "San Francisco Bay Area or remote") for facet, values in extra.items()]
     for applied, limit_pages, label in groups:              # one query per filter group: Workday ANDs different groups
-        for job in workday_jobs(company, await pages(applied, limit_pages), now, label):
+        postings, error = await pages(applied, limit_pages)
+        for job in workday_jobs(company, postings, now, label):
             if job["key"] not in seen:
                 seen.add(job["key"])
                 found.append(job)
+        if error:
+            return found, error  # A failed later page must not become a successful partial read.
     return found, None
 
 
@@ -420,6 +423,7 @@ async def fetch_google(company: dict, get_html):
 async def fetch_apple(company: dict, get_html, cfg: dict):
     """Read Apple search pages for New York and the Bay Area and retain relevant titled roles only."""
     found, errors, seen = [], [], set()
+    read_pages = 0
     for slug, place in company.get("locations", APPLE_LOCATIONS).items():
         for query in company.get("queries", APPLE_QUERIES):
             params = urlencode({"location": slug, "search": query})
@@ -427,13 +431,15 @@ async def fetch_apple(company: dict, get_html, cfg: dict):
             if status != 200:
                 errors.append(f"HTTP {status}")
                 continue
-            page_jobs = parse_apple_html(page, company.get("name", "Apple"), cfg, place)
-            if not page_jobs:
-                errors.append("no matching titled roles found on results page")
-            for job in page_jobs:
+            read_pages += 1
+            for job in parse_apple_html(page, company.get("name", "Apple"), cfg, place):
                 if job["url"] not in seen:
                     seen.add(job["url"])
                     found.append(job)
+    # One place or keyword with no matching roles today is normal. Only when every page read gives
+    # nothing is it worth reporting: then Apple's page layout has probably changed.
+    if read_pages and not found:
+        errors.append("no matching titled roles on any results page (the page layout may have changed)")
     return found, ("; ".join(errors) if errors else None)
 
 
@@ -1382,7 +1388,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     candidates, errors, prefiltered_keys = [], [], []
     companies = cfg.get("companies", [])
     public = None
-    if any(c.get("public_feed") or c.get("guarded") or c.get("provider") in ("ashby_html", "morganstanley", "intuit", "workable", "sitemap_jobs", "teamtailor_rss", "guardant", "recruitee") for c in companies):
+    if any(c.get("public_feed") or c.get("guarded") or c.get("paced") or c.get("provider") in ("ashby_html", "morganstanley", "intuit", "workable", "sitemap_jobs", "teamtailor_rss", "guardant", "recruitee") for c in companies):
         from public_jobs import PublicJobsClient
         public = PublicJobsClient(timeout=18)
     gate = asyncio.Semaphore(CONCURRENCY)                         # a few companies at a time; each is a different server
@@ -1393,7 +1399,10 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
         async with gate:
             if provider in ("morganstanley", "intuit", "workable", "sitemap_jobs", "teamtailor_rss", "guardant", "recruitee"):
                 from public_readers import read
-                found, err = await read(dict(company, name=name), cfg, public, None if include_seen else db_path)
+                # Intuit keeps its request/page caps, with time for a slow first byte.
+                from public_jobs import PublicJobsClient as SourceClient
+                source_public = SourceClient(timeout=30) if provider == "intuit" else public
+                found, err = await read(dict(company, name=name), cfg, source_public, None if include_seen else db_path)
             elif provider == "ashby_html":
                 found, err = await fetch_ashby_html(dict(company, name=name), cfg, public, None if include_seen else db_path)
             elif company.get("public_feed") and provider in ("greenhouse", "lever", "ashby"):
@@ -1405,7 +1414,17 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             elif provider == "amazon":
                 found, err = await fetch_amazon(dict(company, name=name), get_json)
             elif provider == "workday":
-                if company.get("guarded"):
+                if company.get("paced"):
+                    from public_jobs import PublicJobsClient
+                    from public_readers import fetch_paced_workday
+                    source_public = PublicJobsClient(timeout=25, pause=2)
+                    try:
+                        found, err = await asyncio.wait_for(fetch_paced_workday(
+                            dict(company, name=name), cfg, source_public, now,
+                            None if include_seen else db_path), timeout=60)
+                    except TimeoutError:
+                        found, err = [], "paced Workday exceeded 60-second budget"
+                elif company.get("guarded"):
                     from public_readers import fetch_guarded_workday
                     found, err = await asyncio.wait_for(fetch_guarded_workday(dict(company, name=name), cfg, public, now), timeout=20)
                 else:
@@ -1499,7 +1518,8 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             if scored:
                 job["score"], job["reasons"] = scored
                 candidates.append((provider, slug, job))
-            elif provider in ("intuit", "workable", "sitemap_jobs", "teamtailor_rss", "guardant", "recruitee"):
+            elif (provider in ("intuit", "workable", "sitemap_jobs", "teamtailor_rss", "guardant", "recruitee") or
+                  (provider == "workday" and company.get("paced") and job.get("details_checked"))):
                 # Complete, rejected details should not consume tomorrow's cap.
                 prefiltered_keys.append(job["key"])
             elif provider == "ashby_html" and cfg.get("max_age_days"):
@@ -1551,8 +1571,8 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 skipped_keys.append(job["key"])                  # internship, contract or part-time
                 continue
         if provider == "workday" and not job["text"]:
-            if any(c.get("guarded") and c.get("name") == job["company"] for c in companies):
-                continue  # This source already spent its small, guarded detail budget.
+            if any((c.get("guarded") or c.get("paced")) and c.get("name") == job["company"] for c in companies):
+                continue  # This source already spent its own detail budget.
             if fetched >= DETAIL_LIMIT * 2:
                 continue
             fetched += 1
