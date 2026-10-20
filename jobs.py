@@ -916,12 +916,21 @@ def title_matches(title: str, cfg: dict):
     if has(t, cfg.get("exclude_title", [])):
         return False, 0, []
     junior = has(t, cfg.get("junior_words", []))
+    # Mid levels ("Engineer II", "Software Engineer 2", "Level 3") usually ask for 2+ years. With max_level 1 they are
+    # dropped unless the title itself says it is for new graduates ("Software Engineer II, New Grad").
+    level = re.search(r"(?:^|\s)(ii|iii|2|3)$", head) or re.search(r"\blevel\s*(ii|iii|2|3)\b", t)
+    if level and not junior:
+        number = {"ii": 2, "iii": 3}.get(level.group(1), None) or int(level.group(1))
+        if number > cfg.get("max_level", 3):
+            return False, 0, []
+    if levels and not junior and min(int(levels.group(1)), int(levels.group(2))) > cfg.get("max_level", 3):
+        return False, 0, []
     strong, plain = has(t, cfg.get("strong_title", [])), has(t, cfg.get("include_title", []))
     if not strong and not plain:
         return False, 0, []
     score, reasons = (3, ["role match"]) if strong else (1, [])
     if junior:
-        score += 2
+        score += cfg.get("junior_bonus", 2)
         reasons.append("entry level")
     return True, score, reasons
 

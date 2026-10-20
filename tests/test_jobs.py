@@ -68,7 +68,10 @@ class TitleTests(unittest.TestCase):
     def test_senior_level_numbers_and_vice_presidents_are_skipped(self):
         for t in ["Software Engineer 4/5 – Data and Feature Infrastructure", "Applied Researcher 4 (AI Foundations)", "Full Stack Engineer 5", "Software Engineer IV", "Software Engineer III, Ads", "Vice President, AI Center of Excellence"]:
             self.assertFalse(jobs.title_matches(t, CFG)[0], t)
-        for t in ["Software Engineer 3/4 - Platform", "Software Development Engineer II", "Software Engineer 2", "Software Engineer II, Growth", "2027 University Graduate - Software Engineer"]:
+        # Entry level only (max_level 1): mid levels are dropped too, unless the title says it is for new graduates.
+        for t in ["Software Engineer 3/4 - Platform", "Software Development Engineer II", "Software Engineer 2", "Software Engineer II, Growth"]:
+            self.assertFalse(jobs.title_matches(t, CFG)[0], t)
+        for t in ["2027 University Graduate - Software Engineer", "Software Engineer II, New Grad"]:
             self.assertTrue(jobs.title_matches(t, CFG)[0], t)
 
     def test_exclusions_always_win_even_with_an_entry_level_word(self):
@@ -94,7 +97,7 @@ class SweFocusTests(unittest.TestCase):
         self.assertEqual(swe, ml)
 
     def test_swe_titles_match(self):
-        for t in ["Software Development Engineer", "Software Dev Engineer, AWS", "SDE II", "Member of Technical Staff", "Member of Technical Staff, Inference", "Software Engineer", "Backend Engineer", "Full Stack Engineer", "Platform Engineer", "Infrastructure Engineer", "Software Engineer, New Grad", "Site Reliability Engineer"]:
+        for t in ["Software Development Engineer", "Software Dev Engineer, AWS", "SDE I", "Member of Technical Staff", "Member of Technical Staff, Inference", "Software Engineer", "Backend Engineer", "Full Stack Engineer", "Platform Engineer", "Infrastructure Engineer", "Software Engineer, New Grad", "Site Reliability Engineer"]:
             self.assertTrue(jobs.title_matches(t, CFG)[0], t)
 
     def test_unrelated_engineers_do_not(self):
@@ -275,11 +278,11 @@ class ScanTests(unittest.TestCase):
                                               ab_job(3, "Data Engineer", text="Built pipelines. 3+ years of experience.")]}})
         co = [{"name": "Acme", "provider": "ashby", "slug": "acme"}]
         text, n, _ = self.scan(feeds, co)
-        self.assertEqual(n, 2)
-        self.assertNotIn("ML Engineer", text.replace("Data Engineer", ""))
-        self.assertIn("asks for 3+ years", text)
+        self.assertEqual(n, 1)                                              # entry level: 3+ years is already too many
+        self.assertIn("Backend Engineer", text)
+        self.assertNotIn("Data Engineer", text)
         again = self.scan(feeds, co, include_seen=True)
-        self.assertEqual(again[1], 2)                                       # the 6-year role never comes back
+        self.assertEqual(again[1], 1)                                       # the skipped roles never come back
 
     def test_one_company_cannot_fill_the_whole_list(self):
         feeds = FakeFeeds({"job-board/big": {"jobs": [ab_job(i, f"ML Engineer Team{i}") for i in range(10)]},

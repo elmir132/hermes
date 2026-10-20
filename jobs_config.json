@@ -2917,7 +2917,13 @@
   "avp",
   "svp",
   "evp",
-  "distinguished"
+  "distinguished",
+  "experienced",
+  "mid level",
+  "mid-level",
+  "mid senior",
+  "mid-senior",
+  "expert"
  ],
  "junior_words": [
   "junior",
@@ -2928,7 +2934,27 @@
   "new graduate",
   "graduate",
   "university",
-  "early career"
+  "early career",
+  "entry",
+  "grad",
+  "graduates",
+  "new graduates",
+  "campus",
+  "masters",
+  "early talent",
+  "early in career",
+  "rotational",
+  "rotation program",
+  "class of 2026",
+  "class of 2027",
+  "2026 graduate",
+  "2027 graduate",
+  "engineer i",
+  "developer i",
+  "level 1",
+  "level i",
+  "postgraduate",
+  "post graduate"
  ],
  "home_locations": [
   "new york",
@@ -3023,7 +3049,7 @@
   "seasonal",
   "freelance"
  ],
- "max_years": 4,
+ "max_years": 3,
  "max_per_company": 3,
  "tier_bonus": {
   "1": 4,
@@ -3033,5 +3059,7 @@
  },
  "min_pay": 150000,
  "max_age_days": 60,
- "ratings_note": "pay, prestige, wlb (work-life balance), exits (exit opportunities), 1-5, and sponsor (usually sponsors H-1B) are estimates by Claude Fable 5.1 on Oct 18 2026 from general knowledge, not measured data. Tier = sum of the four scores: 17+ tier 1, 15-16 tier 2, 12-14 tier 3, else 4."
+ "ratings_note": "pay, prestige, wlb (work-life balance), exits (exit opportunities), 1-5, and sponsor (usually sponsors H-1B) are estimates by Claude Fable 5.1 on Oct 18 2026 from general knowledge, not measured data. Tier = sum of the four scores: 17+ tier 1, 15-16 tier 2, 12-14 tier 3, else 4.",
+ "max_level": 1,
+ "junior_bonus": 4
 }
