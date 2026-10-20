@@ -3213,6 +3213,1851 @@
    },
    "tier": 3,
    "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Abnormal Security",
+   "provider": "greenhouse",
+   "slug": "abnormalsecurity",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Hive",
+   "provider": "lever",
+   "slug": "hive",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "SIG",
+   "provider": "jibe",
+   "host": "careers.sig.com",
+   "queries": [
+    "software engineer",
+    "machine learning"
+   ],
+   "pages": 1,
+   "tier": 2,
+   "guarded": true,
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   },
+   "ratings_note": "Estimates, 2026-10-20; sponsorship reflects checked posting evidence where available, otherwise unknown."
+  },
+  {
+   "name": "Morgan Stanley",
+   "provider": "morganstanley",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; sponsorship reflects checked posting evidence where available, otherwise unknown."
+  },
+  {
+   "name": "Intuit",
+   "provider": "intuit",
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 4,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; sponsorship reflects checked posting evidence where available, otherwise unknown."
+  },
+  {
+   "name": "Booz Allen",
+   "provider": "sitemap_jobs",
+   "sitemap_url": "https://careers.boozallen.com/careers/sitemap.xml",
+   "job_path": "/careers/JobDetail/",
+   "parser": "boozallen",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; sponsorship reflects checked posting evidence where available, otherwise unknown."
+  },
+  {
+   "name": "Hugging Face",
+   "provider": "workable",
+   "slug": "huggingface",
+   "tier": 2,
+   "ratings": {
+    "pay": 3,
+    "prestige": 4,
+    "wlb": 4,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; sponsorship reflects checked posting evidence where available, otherwise unknown."
+  },
+  {
+   "name": "Blizzard",
+   "provider": "sitemap_jobs",
+   "sitemap_url": "https://careers.blizzard.com/global/en/sitemap.xml",
+   "job_path": "/global/en/job/",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; sponsorship reflects checked posting evidence where available, otherwise unknown."
+  },
+  {
+   "name": "ServiceNow",
+   "provider": "sitemap_jobs",
+   "sitemap_url": "https://careers.servicenow.com/sitemap.xml",
+   "job_path": "/jobs/",
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; sponsorship policy for checked roles is unknown."
+  },
+  {
+   "name": "Algolia",
+   "provider": "greenhouse",
+   "slug": "algolia",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Included Health",
+   "provider": "lever",
+   "slug": "includedhealth",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Alloy",
+   "provider": "greenhouse",
+   "slug": "alloy",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Lucidworks",
+   "provider": "lever",
+   "slug": "lucidworks",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "AlphaSense",
+   "provider": "greenhouse",
+   "slug": "alphasense",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Aledade",
+   "provider": "lever",
+   "slug": "aledade",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "AppLovin",
+   "provider": "greenhouse",
+   "slug": "applovin",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "CaptivateIQ",
+   "provider": "lever",
+   "slug": "captivateiq",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Aquatic Capital Management",
+   "provider": "greenhouse",
+   "slug": "aquaticcapitalmanagement",
+   "tier": 2,
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Lyra Health",
+   "provider": "lever",
+   "slug": "lyrahealth",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Arize AI",
+   "provider": "greenhouse",
+   "slug": "arizeai",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "SnapLogic",
+   "provider": "lever",
+   "slug": "snaplogic",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Attentive",
+   "provider": "greenhouse",
+   "slug": "attentive",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Sonar",
+   "provider": "lever",
+   "slug": "sonarsource",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "BitGo",
+   "provider": "greenhouse",
+   "slug": "bitgo",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Synthego",
+   "provider": "lever",
+   "slug": "synthego",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Box",
+   "provider": "greenhouse",
+   "slug": "boxinc",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Braze",
+   "provider": "greenhouse",
+   "slug": "braze",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Carta",
+   "provider": "greenhouse",
+   "slug": "carta",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Checkr",
+   "provider": "greenhouse",
+   "slug": "checkr",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "DigitalOcean",
+   "provider": "greenhouse",
+   "slug": "digitalocean98",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "EarnIn",
+   "provider": "greenhouse",
+   "slug": "earnin",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Faire",
+   "provider": "greenhouse",
+   "slug": "faire",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Five9",
+   "provider": "greenhouse",
+   "slug": "five9",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Flexport",
+   "provider": "greenhouse",
+   "slug": "flexport",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Freenome",
+   "provider": "greenhouse",
+   "slug": "freenome",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Motive",
+   "provider": "greenhouse",
+   "slug": "gomotive",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Human Interest",
+   "provider": "greenhouse",
+   "slug": "humaninterest",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "InMobi",
+   "provider": "greenhouse",
+   "slug": "inmobi",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Komodo Health",
+   "provider": "greenhouse",
+   "slug": "komodohealth",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Lattice",
+   "provider": "greenhouse",
+   "slug": "lattice",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "LaunchDarkly",
+   "provider": "greenhouse",
+   "slug": "launchdarkly",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Liftoff",
+   "provider": "greenhouse",
+   "slug": "liftoff",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Moloco",
+   "provider": "greenhouse",
+   "slug": "moloco",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Natera",
+   "provider": "greenhouse",
+   "slug": "natera",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Nextdoor",
+   "provider": "greenhouse",
+   "slug": "nextdoor",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Nova Credit",
+   "provider": "greenhouse",
+   "slug": "novacredit",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "OpenTable",
+   "provider": "greenhouse",
+   "slug": "opentable",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Oscar Health",
+   "provider": "greenhouse",
+   "slug": "oscar",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "PagerDuty",
+   "provider": "greenhouse",
+   "slug": "pagerduty",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "PathAI",
+   "provider": "greenhouse",
+   "slug": "pathai",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Qube Research & Technologies",
+   "provider": "greenhouse",
+   "slug": "quberesearchandtechnologies",
+   "tier": 2,
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Recursion",
+   "provider": "greenhouse",
+   "slug": "recursionpharmaceuticals",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Smartsheet",
+   "provider": "greenhouse",
+   "slug": "smartsheet",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "SoFi",
+   "provider": "greenhouse",
+   "slug": "sofi",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Sourcegraph",
+   "provider": "greenhouse",
+   "slug": "sourcegraph91",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Stash",
+   "provider": "greenhouse",
+   "slug": "stashinvest",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Tanium",
+   "provider": "greenhouse",
+   "slug": "tanium",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "The Trade Desk",
+   "provider": "greenhouse",
+   "slug": "thetradedesk",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Trumid",
+   "provider": "greenhouse",
+   "slug": "trumid",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Upstart",
+   "provider": "greenhouse",
+   "slug": "upstart",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Vatic Labs",
+   "provider": "greenhouse",
+   "slug": "vaticlabs",
+   "tier": 2,
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Xantium",
+   "provider": "greenhouse",
+   "slug": "xantium",
+   "tier": 2,
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Yext",
+   "provider": "greenhouse",
+   "slug": "yext",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Zocdoc",
+   "provider": "greenhouse",
+   "slug": "zocdoc",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Altruist",
+   "provider": "greenhouse",
+   "slug": "altruist",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "AssemblyAI",
+   "provider": "greenhouse",
+   "slug": "assemblyai",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Cresta",
+   "provider": "greenhouse",
+   "slug": "cresta",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Endor Labs",
+   "provider": "greenhouse",
+   "slug": "endorlabs",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Mithril",
+   "provider": "greenhouse",
+   "slug": "mithril",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Netskope",
+   "provider": "greenhouse",
+   "slug": "netskope",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Pendo",
+   "provider": "greenhouse",
+   "slug": "pendo",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "PhysicsX",
+   "provider": "greenhouse",
+   "slug": "physicsx",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Quilt",
+   "provider": "greenhouse",
+   "slug": "quilt",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "StackAdapt",
+   "provider": "greenhouse",
+   "slug": "stackadapt",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Turing",
+   "provider": "greenhouse",
+   "slug": "turing",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Flatiron Health",
+   "provider": "greenhouse",
+   "slug": "flatironhealth",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Coalition",
+   "provider": "greenhouse",
+   "slug": "coalition",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Canonical",
+   "provider": "greenhouse",
+   "slug": "canonical",
+   "tier": 3,
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Warp Terminal",
+   "provider": "greenhouse",
+   "slug": "warp",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "SentinelOne",
+   "provider": "greenhouse",
+   "slug": "sentinellabs",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates, 2026-10-20; not measured data. Unknown sponsorship is not a promise.",
+   "public_feed": true
+  },
+  {
+   "name": "Ambience Healthcare",
+   "provider": "ashby",
+   "slug": "ambiencehealthcare",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Anrok",
+   "provider": "ashby",
+   "slug": "anrok",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Arena AI",
+   "provider": "ashby",
+   "slug": "arena",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Aurora",
+   "provider": "ashby",
+   "slug": "aurora-operations-inc",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 2,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Superhuman",
+   "provider": "ashby",
+   "slug": "Superhuman Platform Inc",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Axiom",
+   "provider": "ashby",
+   "slug": "axiom",
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 4,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Candid Health",
+   "provider": "ashby",
+   "slug": "candidhealth",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Causal",
+   "provider": "ashby",
+   "slug": "causal",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Chai Discovery",
+   "provider": "ashby",
+   "slug": "chaidiscovery",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Cinder",
+   "provider": "ashby",
+   "slug": "cinder",
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 4,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Clay",
+   "provider": "ashby",
+   "slug": "claylabs",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 2,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Column",
+   "provider": "ashby",
+   "slug": "column",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Crusoe",
+   "provider": "ashby",
+   "slug": "crusoe",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Deepgram",
+   "provider": "ashby",
+   "slug": "deepgram",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Doppel",
+   "provider": "ashby",
+   "slug": "doppel",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Hightouch",
+   "provider": "ashby",
+   "slug": "hightouch",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Imprint",
+   "provider": "ashby",
+   "slug": "imprint",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Inngest",
+   "provider": "ashby",
+   "slug": "inngest",
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 4,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Kalshi",
+   "provider": "ashby",
+   "slug": "kalshi",
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 2,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Legora",
+   "provider": "ashby",
+   "slug": "legora",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "LlamaIndex",
+   "provider": "ashby",
+   "slug": "llamaindex",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Mem0",
+   "provider": "ashby",
+   "slug": "mem0",
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 4,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Merge",
+   "provider": "ashby",
+   "slug": "merge",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Mirage",
+   "provider": "ashby",
+   "slug": "mirage",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Neon",
+   "provider": "ashby",
+   "slug": "neon",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Numeric",
+   "provider": "ashby",
+   "slug": "numeric",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Orb",
+   "provider": "ashby",
+   "slug": "orb",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "PermitFlow",
+   "provider": "ashby",
+   "slug": "permitflow",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Polymarket",
+   "provider": "ashby",
+   "slug": "polymarket",
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 2,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Pylon",
+   "provider": "ashby",
+   "slug": "pylon",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Reflection AI",
+   "provider": "ashby",
+   "slug": "reflectionai",
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 2,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Sardine",
+   "provider": "ashby",
+   "slug": "sardine",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Scribe",
+   "provider": "ashby",
+   "slug": "scribe",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Semgrep",
+   "provider": "ashby",
+   "slug": "semgrep",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Sentry",
+   "provider": "ashby",
+   "slug": "sentry",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 2,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Sift",
+   "provider": "ashby",
+   "slug": "sift",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Socure",
+   "provider": "ashby",
+   "slug": "socure",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Suno",
+   "provider": "ashby",
+   "slug": "suno",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 2,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Tavily",
+   "provider": "ashby",
+   "slug": "tavily",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Tavus",
+   "provider": "ashby",
+   "slug": "tavus",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Temporal",
+   "provider": "ashby",
+   "slug": "temporal",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 2,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Tennr",
+   "provider": "ashby",
+   "slug": "tennr",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Traba",
+   "provider": "ashby",
+   "slug": "traba",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Unify",
+   "provider": "ashby",
+   "slug": "unify",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Watershed",
+   "provider": "ashby",
+   "slug": "watershed",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Writer",
+   "provider": "ashby",
+   "slug": "writer",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
   }
  ],
  "strong_title": [

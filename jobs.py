@@ -698,7 +698,7 @@ def jibe_jobs(company: dict, items: list) -> list:
 async def fetch_jibe(company: dict, get_json):
     found, seen, errors = [], set(), []
     for query in company.get("queries", JIBE_QUERIES):
-        for page in range(1, 4):
+        for page in range(1, min(3, max(1, int(company.get("pages", 3)))) + 1):
             status, data = await get_json(f"https://{company['host']}/api/jobs?{urlencode({'keywords': query, 'page': page, 'limit': 100})}")
             if status != 200 or not isinstance(data, dict):
                 errors.append(f"HTTP {status}")
@@ -889,8 +889,13 @@ async def fetch_public_feed(company, public):
             raw = by_id.get(str(job.get("gh_id")), {})
             job["text"] = _clean(html_lib.unescape(html_lib.unescape(raw.get("content") or "")))
             job["pay"] = pay_from_text(job["text"])
-            if job["location"].strip().casefold() in ("", "united states", "united states of america", "multiple locations"):
-                offices = raw.get("offices") or []
+            offices = raw.get("offices") or []
+            label = job["location"].strip().casefold()
+            # Resolve an office label only with that requisition's explicit
+            # office address. Do not infer a country from a company HQ.
+            office_alias = any(isinstance(o, dict) and str(o.get("name") or "").strip().casefold() == label
+                               and o.get("location") for o in offices)
+            if label in ("", "united states", "united states of america", "multiple locations", "any location, united states") or office_alias:
                 places = [office.get("location") or office.get("name") for office in offices if isinstance(office, dict)]
                 if any(isinstance(place, str) and place.strip() for place in places):
                     job["location"] = "; ".join(dict.fromkeys(place.strip() for place in places if isinstance(place, str) and place.strip()))
@@ -1351,7 +1356,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     candidates, errors, prefiltered_keys = [], [], []
     companies = cfg.get("companies", [])
     public = None
-    if any(c.get("public_feed") or c.get("provider") == "ashby_html" for c in companies):
+    if any(c.get("public_feed") or c.get("guarded") or c.get("provider") in ("ashby_html", "morganstanley", "intuit", "workable", "sitemap_jobs") for c in companies):
         from public_jobs import PublicJobsClient
         public = PublicJobsClient(timeout=18)
     gate = asyncio.Semaphore(CONCURRENCY)                         # a few companies at a time; each is a different server
@@ -1360,7 +1365,10 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
         provider, name = company["provider"], company.get("name", company.get("slug"))
         slug = company.get("slug", company.get("tenant", ""))
         async with gate:
-            if provider == "ashby_html":
+            if provider in ("morganstanley", "intuit", "workable", "sitemap_jobs"):
+                from public_readers import read
+                found, err = await read(dict(company, name=name), cfg, public, None if include_seen else db_path)
+            elif provider == "ashby_html":
                 found, err = await fetch_ashby_html(dict(company, name=name), cfg, public, None if include_seen else db_path)
             elif company.get("public_feed") and provider in ("greenhouse", "lever"):
                 found, err = await fetch_public_feed(dict(company, name=name), public)
@@ -1377,7 +1385,10 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             elif provider == "rippling":
                 found, err = await fetch_rippling(dict(company, name=name), get_json)
             elif provider == "jibe":
-                found, err = await fetch_jibe(dict(company, name=name), get_json)
+                if company.get("guarded"):
+                    found, err = await asyncio.wait_for(fetch_jibe(dict(company, name=name), public.json), timeout=20)
+                else:
+                    found, err = await fetch_jibe(dict(company, name=name), get_json)
             elif provider == "tiktok":
                 found, err = await fetch_tiktok(dict(company, name=name), get_json)
             elif provider == "atlassian":
@@ -1437,6 +1448,9 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             if scored:
                 job["score"], job["reasons"] = scored
                 candidates.append((provider, slug, job))
+            elif provider in ("intuit", "workable", "sitemap_jobs"):
+                # Complete, rejected details should not consume tomorrow's cap.
+                prefiltered_keys.append(job["key"])
             elif provider == "ashby_html" and cfg.get("max_age_days"):
                 age = age_days(job, now)
                 if age is not None and age > cfg["max_age_days"]:

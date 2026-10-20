@@ -158,6 +158,23 @@ class PublicFeedTests(unittest.TestCase):
         self.assertNotIn('<p',found[0]['text'])
         self.assertTrue(calls[0].endswith('?content=true'))
 
+    def test_explicit_office_alias_and_remote_us_metadata(self):
+        import copy
+        payload = copy.deepcopy(GH)
+        raw = payload['jobs'][0]
+        class Client:
+            async def json(self, url):return 200, payload
+        company = {'provider':'greenhouse','name':'Example','slug':'example'}
+        for label, offices, expected in (
+            ('NY office', [{'name':'NY office','location':'New York, NY, United States'}], 'New York'),
+            ('Any location, United States', [{'name':'United States - Remote','location':None}], 'Remote'),
+            ('Any location, Canada', [{'name':'United States - Remote','location':None}], 'Canada')):
+            raw['location'] = {'name':label}
+            raw['offices'] = offices
+            found, err = asyncio.run(jobs.fetch_public_feed(company, Client()))
+            self.assertIsNone(err)
+            self.assertIn(expected, found[0]['location'])
+
     def test_empty_error_and_missing_descriptions(self):
         company={'provider':'greenhouse','name':'Example','slug':'example'}
         class Client:

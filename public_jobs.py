@@ -63,7 +63,7 @@ class PublicJobsClient:
         self.stopped = set()
         self.requests = []
 
-    async def _raw(self, url):
+    async def _raw(self, url, body=None):
         from urllib import error, request
 
         class NoRedirect(request.HTTPRedirectHandler):
@@ -72,7 +72,10 @@ class PublicJobsClient:
 
         def read():
             opener = request.build_opener(NoRedirect)
-            req = request.Request(url, headers={"User-Agent": USER_AGENT})
+            headers = {"User-Agent": USER_AGENT}
+            if body is not None:
+                headers["Content-Type"] = "application/json"
+            req = request.Request(url, data=json.dumps(body).encode() if body is not None else None, headers=headers)
             try:
                 with opener.open(req, timeout=self.timeout) as response:
                     return response.status, dict(response.headers), response.read(12_000_000).decode("utf-8", "replace")
@@ -80,23 +83,24 @@ class PublicJobsClient:
                 return exc.code, dict(exc.headers), exc.read(100_000).decode("utf-8", "replace")
         return await asyncio.to_thread(read)
 
-    async def _request(self, url, delay):
+    async def _request(self, url, delay, body=None):
         origin = self._origin(url)
+        key = url if body is None else (url, json.dumps(body, sort_keys=True))
         # Several boards share one ATS host. Serialize requests there so
         # concurrent companies still respect the host's pause and stop state.
         lock = self.locks.setdefault(origin, asyncio.Lock())
         async with lock:
-            if url in self.cache:
-                return self.cache[url]
+            if key in self.cache:
+                return self.cache[key]
             if origin in self.stopped:
                 return 0, {}, ''
             await asyncio.sleep(max(0, delay - (time.monotonic() - self.last.get(origin, 0))))
             try:
-                result = await self.raw(url)
+                result = await self.raw(url) if body is None else await self.raw(url, body)
             except Exception:
                 result = (0, {}, '')
             self.last[origin] = time.monotonic()
-            self.cache[url] = result
+            self.cache[key] = result
             self.requests.append({'url': url, 'status': result[0]})
             if result[0] in (403, 429):
                 self.stopped.add(origin)
@@ -109,29 +113,29 @@ class PublicJobsClient:
             raise ValueError('public jobs require an HTTPS URL without credentials')
         return f'https://{parts.netloc}'
 
-    async def text(self, url, depth=0):
+    async def text(self, url, depth=0, body=None):
         origin = self._origin(url)
         if origin not in self.policies:
-            status, _, body = await self._request(origin + '/robots.txt', self.pause)
+            status, _, policy_text = await self._request(origin + '/robots.txt', self.pause)
             if status in (404, 410):
-                body = ''
+                policy_text = ''
             elif status != 200:
-                body = 'User-agent: *\nDisallow: /'
-            self.policies[origin] = robots_policy(body)
+                policy_text = 'User-agent: *\nDisallow: /'
+            self.policies[origin] = robots_policy(policy_text)
         parser, groups = self.policies[origin]
         if not parser.can_fetch(USER_AGENT, url) or any(not p.can_fetch(USER_AGENT, url) for p in groups):
             return 0, ''
         delay = max(self.pause, parser.crawl_delay(USER_AGENT) or 0)
-        status, headers, body = await self._request(url, delay)
+        status, headers, response = await self._request(url, delay, body)
         if status in (301, 302, 303, 307, 308):
             location = headers.get('location') or headers.get('Location')
             if location and depth < 5:
-                return await self.text(urljoin(url, location), depth + 1)
+                return await self.text(urljoin(url, location), depth + 1, None if status in (301, 302, 303) else body)
             return 0, ''
-        return status, body
+        return status, response
 
-    async def json(self, url):
-        status, body = await self.text(url)
+    async def json(self, url, body=None):
+        status, body = await self.text(url, body=body)
         try:
             return status, json.loads(body) if status == 200 else {}
         except (ValueError, TypeError):
