@@ -1,0 +1,16 @@
+{
+ "title": "Senior Software Engineer, DevEx",
+ "location": "United States of America",
+ "country": {
+  "descriptor": "United States of America",
+  "id": "bc33aa3152ec42d4995f4791a106ed09"
+ },
+ "jobRequisitionLocation": {
+  "descriptor": "US - United States of America",
+  "country": {
+   "descriptor": "United States of America",
+   "id": "bc33aa3152ec42d4995f4791a106ed09",
+   "alpha2Code": "US"
+  }
+ }
+}

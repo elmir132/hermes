@@ -245,7 +245,7 @@ async def fetch_workday(company: dict, get_json, now=None):
 
     async def pages(applied, limit_pages):
         got = []
-        for page in range(limit_pages):
+        for page in range(min(limit_pages, company.get("page_cap", limit_pages))):
             status, data = await get_json(base + "/jobs", {"appliedFacets": applied, "limit": WORKDAY_PAGE, "offset": page * WORKDAY_PAGE,
                                                            "searchText": company.get("search", "")})
             if status != 200 or not isinstance(data, dict):
@@ -876,9 +876,9 @@ async def fetch_public_feed(company, public):
     response, avoiding an extra request per candidate. No keys are used.
     """
     provider, slug = company["provider"], company["slug"]
-    url = {"greenhouse": GREENHOUSE + "?content=true", "lever": LEVER}[provider].format(slug=slug)
+    url = {"greenhouse": GREENHOUSE + "?content=true", "lever": LEVER, "ashby": ASHBY}[provider].format(slug=quote(slug, safe=""))
     status, payload = await public.json(url)
-    valid = isinstance(payload, dict) and isinstance(payload.get("jobs"), list) if provider == "greenhouse" else isinstance(payload, list)
+    valid = isinstance(payload, dict) and isinstance(payload.get("jobs"), list) if provider in ("greenhouse", "ashby") else isinstance(payload, list)
     if status != 200 or not valid:
         return [], f"public feed unavailable (HTTP {status})"
     found = jobs_from_feed(provider, payload, company["name"])
@@ -901,6 +901,32 @@ async def fetch_public_feed(company, public):
                     job["location"] = "; ".join(dict.fromkeys(place.strip() for place in places if isinstance(place, str) and place.strip()))
         if any(not job["text"] for job in found):
             return [], "public feed omitted posting descriptions"
+    if provider == "lever":
+        by_id = {str(r.get("id")): r for r in payload if isinstance(r, dict)}
+        for job in found:
+            raw = by_id.get(job["key"].rsplit(":", 1)[-1], {})
+            parts = [raw.get("descriptionPlain") or raw.get("description") or ""]
+            for section in raw.get("lists") or []:
+                if isinstance(section, dict):
+                    parts.extend([section.get("text") or "", section.get("content") or ""])
+            parts.append(raw.get("additionalPlain") or raw.get("additional") or "")
+            # Lever keeps qualifications in lists separately from its overview.
+            job["text"] = _clean(html_lib.unescape(" ".join(str(p) for p in parts)))
+            job["pay"] = job["pay"] or pay_from_text(job["text"])
+    if provider == "ashby":
+        # Use addresses attached to this posting, never the employer's HQ.
+        by_id = {str(r.get("id")): r for r in payload["jobs"] if isinstance(r, dict)}
+        for job in found:
+            raw = by_id.get(job["key"].rsplit(":", 1)[-1], {})
+            places = [raw] + [r for r in raw.get("secondaryLocations", []) if isinstance(r, dict)]
+            labels = [job["location"]]
+            for place in places:
+                address = (place.get("address") or {}).get("postalAddress") or {}
+                if isinstance(address, dict):
+                    label = ", ".join(str(address[k]) for k in ("addressLocality", "addressRegion", "addressCountry") if address.get(k))
+                    if label:
+                        labels.append(label)
+            job["location"] = "; ".join(dict.fromkeys(filter(None, labels)))
     return found, None
 
 
@@ -1351,12 +1377,12 @@ def _source_status_summary(results, status_by_key):
 
 
 # ---------- the scan ----------
-async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None, get_html=None):
+async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None, get_html=None, alert_jobs=None):
     """get_json(url) -> (status, JSON); get_html(url) -> (status, text). Returns text, count and errors."""
     candidates, errors, prefiltered_keys = [], [], []
     companies = cfg.get("companies", [])
     public = None
-    if any(c.get("public_feed") or c.get("guarded") or c.get("provider") in ("ashby_html", "morganstanley", "intuit", "workable", "sitemap_jobs") for c in companies):
+    if any(c.get("public_feed") or c.get("guarded") or c.get("provider") in ("ashby_html", "morganstanley", "intuit", "workable", "sitemap_jobs", "teamtailor_rss", "guardant", "recruitee") for c in companies):
         from public_jobs import PublicJobsClient
         public = PublicJobsClient(timeout=18)
     gate = asyncio.Semaphore(CONCURRENCY)                         # a few companies at a time; each is a different server
@@ -1365,12 +1391,12 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
         provider, name = company["provider"], company.get("name", company.get("slug"))
         slug = company.get("slug", company.get("tenant", ""))
         async with gate:
-            if provider in ("morganstanley", "intuit", "workable", "sitemap_jobs"):
+            if provider in ("morganstanley", "intuit", "workable", "sitemap_jobs", "teamtailor_rss", "guardant", "recruitee"):
                 from public_readers import read
                 found, err = await read(dict(company, name=name), cfg, public, None if include_seen else db_path)
             elif provider == "ashby_html":
                 found, err = await fetch_ashby_html(dict(company, name=name), cfg, public, None if include_seen else db_path)
-            elif company.get("public_feed") and provider in ("greenhouse", "lever"):
+            elif company.get("public_feed") and provider in ("greenhouse", "lever", "ashby"):
                 found, err = await fetch_public_feed(dict(company, name=name), public)
             elif provider == "uber":
                 from public_jobs import PublicJobsClient
@@ -1379,11 +1405,19 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             elif provider == "amazon":
                 found, err = await fetch_amazon(dict(company, name=name), get_json)
             elif provider == "workday":
-                found, err = await fetch_workday(dict(company, name=name), get_json, now)
+                if company.get("guarded"):
+                    from public_readers import fetch_guarded_workday
+                    found, err = await asyncio.wait_for(fetch_guarded_workday(dict(company, name=name), cfg, public, now), timeout=20)
+                else:
+                    found, err = await fetch_workday(dict(company, name=name), get_json, now)
             elif provider == "gem":
-                found, err = await fetch_gem(dict(company, name=name), get_json)
+                found, err = await fetch_gem(dict(company, name=name), public.json if company.get("guarded") else get_json)
             elif provider == "rippling":
-                found, err = await fetch_rippling(dict(company, name=name), get_json)
+                if company.get("guarded"):
+                    from public_readers import fetch_guarded_rippling
+                    found, err = await asyncio.wait_for(fetch_guarded_rippling(dict(company, name=name), cfg, public), timeout=20)
+                else:
+                    found, err = await fetch_rippling(dict(company, name=name), get_json)
             elif provider == "jibe":
                 if company.get("guarded"):
                     found, err = await asyncio.wait_for(fetch_jibe(dict(company, name=name), public.json), timeout=20)
@@ -1415,7 +1449,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             elif provider == "hn":
                 found, err = await fetch_hn(dict(company, name=name), get_json, now)
             else:
-                url = {"greenhouse": GREENHOUSE, "lever": LEVER, "ashby": ASHBY}[provider].format(slug=slug)
+                url = {"greenhouse": GREENHOUSE, "lever": LEVER, "ashby": ASHBY}[provider].format(slug=quote(slug, safe=""))
                 status, payload = await get_json(url)
                 found, err = (jobs_from_feed(provider, payload, name), None) if status == 200 else ([], f"HTTP {status}")
         return company, provider, slug, name, found, err
@@ -1434,6 +1468,23 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             results.append((company, provider, slug, name, [], f"reader error: {type(result).__name__}" + (f": {str(result)[:160]}" if str(result) else "")))
         else:
             results.append(result)
+    if alert_jobs:
+        from job_alerts import url_key, native_key
+        native_urls = {url_key(j["url"]) for result in results for j in result[4]}
+        grouped = {}
+        for job in alert_jobs:
+            if url_key(job.get("url", "")) in native_urls:
+                continue
+            if cfg.get("hide_ineligible", True) and any(f in INELIGIBLE for f in eligibility_flags(job.get("text", ""))):
+                continue
+            grouped.setdefault(job["company"], []).append(dict(job))
+        for name, records in grouped.items():
+            company = next((c for c in companies if c["name"].casefold() == name.casefold()), {"name": name, "tier": 0})
+            for record in records:
+                record["key"] = native_key(record, company)
+                record["company"] = company["name"]
+            source = dict(company, provider="email_alert", slug=name)
+            results.append((source, "email_alert", name, name, records, None))
     source_status = _record_source_status(db_path, results, now)
     source_summary = _source_status_summary(results, source_status)
     for company, provider, slug, name, found, err in results:
@@ -1448,7 +1499,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             if scored:
                 job["score"], job["reasons"] = scored
                 candidates.append((provider, slug, job))
-            elif provider in ("intuit", "workable", "sitemap_jobs"):
+            elif provider in ("intuit", "workable", "sitemap_jobs", "teamtailor_rss", "guardant", "recruitee"):
                 # Complete, rejected details should not consume tomorrow's cap.
                 prefiltered_keys.append(job["key"])
             elif provider == "ashby_html" and cfg.get("max_age_days"):
@@ -1459,7 +1510,14 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                     prefiltered_keys.append(job["key"])
     keys = [j["key"] for _, _, j in candidates]
     old = set() if include_seen else seen_keys(db_path, keys)
-    fresh = [(p, s, j) for p, s, j in candidates if j["key"] not in old]
+    from job_alerts import url_key
+    url_aliases = {j["key"]: url_key(j["url"]) for _, _, j in candidates}
+    old_urls = set() if include_seen else seen_keys(db_path, list(filter(None, url_aliases.values())))
+    fresh = [(p, s, j) for p, s, j in candidates if j["key"] not in old and url_aliases[j["key"]] not in old_urls]
+    unique = {}
+    for p, slug, job in fresh:
+        unique.setdefault(url_aliases[job["key"]] or job["key"], (p, slug, job))
+    fresh = list(unique.values())
     fresh.sort(key=lambda x: (-x[2]["score"], x[2]["company"], x[2]["title"]))
     shown, skipped_keys, fetched, per_company = [], list(prefiltered_keys), 0, {}
     hidden_ineligible = 0
@@ -1483,6 +1541,8 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                         job["pay"] = (int(r["min_cents"]) // 100, int(r["max_cents"]) // 100)
                         break
         if provider == "rippling" and not job["text"] and job.get("rippling_id"):
+            if any(c.get("guarded") and c.get("name") == job["company"] for c in companies):
+                continue  # This source already spent its small, guarded detail budget.
             if fetched >= DETAIL_LIMIT * 2:
                 continue
             fetched += 1
@@ -1491,6 +1551,8 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 skipped_keys.append(job["key"])                  # internship, contract or part-time
                 continue
         if provider == "workday" and not job["text"]:
+            if any(c.get("guarded") and c.get("name") == job["company"] for c in companies):
+                continue  # This source already spent its small, guarded detail budget.
             if fetched >= DETAIL_LIMIT * 2:
                 continue
             fetched += 1
@@ -1553,7 +1615,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     lines.append("\nVisa and experience notes are only hints from the posting text. Read the posting before relying on them.")
     text = "\n".join(lines)[:OUTPUT_CHARS] + _errs(errors)
     if mark:
-        mark_seen(db_path, [j["key"] for _, _, j in shown])
+        mark_seen(db_path, [key for _, _, j in shown for key in (j["key"], url_key(j["url"])) if key])
     return text, len(shown), errors
 
 

@@ -102,13 +102,13 @@ class PublicTransportTests(unittest.TestCase):
         self.assertEqual(calls[-1],'https://other.example/robots.txt')
 
     def test_robots_error_fails_closed(self):
-        for status in (0,202,301,403,429,503):
+        for status in (0,202,301,429,503):
             c,calls=self.client({'https://example.com/robots.txt':(status,{},'')})
             self.assertEqual(asyncio.run(c.text('https://example.com/jobs')),(0,''))
             self.assertEqual(len(calls),1)
 
     def test_missing_robots_allows(self):
-        for status in (404,410):
+        for status in (400,401,403,404,410):
             c,calls=self.client({'https://example.com/robots.txt':(status,{},''),
                 'https://example.com/jobs':(200,{},'{"jobs":[]}')})
             self.assertEqual(asyncio.run(c.json('https://example.com/jobs')),(200,{'jobs':[]}))
@@ -165,3 +165,42 @@ class PublicTransportTests(unittest.TestCase):
         for url in ('http://example.com/jobs','https://user:password@example.com/jobs'):
             with self.assertRaises(ValueError):asyncio.run(c.text(url))
         self.assertEqual(calls,[])
+
+class RobotsRFC9309Tests(unittest.TestCase):
+    def test_robots_redirects_and_403_do_not_stop_jobs(self):
+        calls = []
+        async def raw(url):
+            calls.append(url)
+            if url == 'https://example.com/robots.txt':return 302, {'Location':'https://policy.example/robots.txt'}, ''
+            if url == 'https://policy.example/robots.txt':return 403, {}, 'Forbidden'
+            return 200, {}, 'public jobs'
+        c = PublicJobsClient(raw, pause=0)
+        self.assertEqual(asyncio.run(c.text('https://example.com/jobs')), (200, 'public jobs'))
+        self.assertFalse(c.stopped)
+        self.assertEqual(len(calls), 3)
+
+    def test_explicit_rules_still_apply_after_redirect(self):
+        async def raw(url):
+            if url == 'https://example.com/robots.txt':return 301, {'Location':'/policy/robots.txt'}, ''
+            if url.endswith('/policy/robots.txt'):return 200, {}, 'User-agent: *\nDisallow: /jobs'
+            raise AssertionError('disallowed request')
+        self.assertEqual(asyncio.run(PublicJobsClient(raw,pause=0).text('https://example.com/jobs')), (0,''))
+
+    def test_html_policy_and_redirect_loop_fail_closed(self):
+        for response in [(200, {}, '<html><title>Just a moment</title></html>'), (302, {'Location':'/robots.txt'}, '')]:
+            async def raw(url):return response
+            c = PublicJobsClient(raw,pause=0)
+            self.assertEqual(asyncio.run(c.text('https://example.com/jobs')), (0,''))
+
+    def test_non_rule_html_is_ignored_but_page_challenges_stop_origin(self):
+        calls = []
+        async def raw(url):
+            calls.append(url)
+            if url.endswith('robots.txt'):return 200, {}, '<html>Not a robots policy</html>'
+            return 200, {}, '<title>Just a moment</title>'
+        c = PublicJobsClient(raw, pause=0)
+        async def run():
+            self.assertEqual(await c.text('https://example.com/jobs'), (0,''))
+            self.assertEqual(await c.text('https://example.com/other'), (0,''))
+        asyncio.run(run())
+        self.assertEqual(len(calls), 2)

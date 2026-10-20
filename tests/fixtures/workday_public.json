@@ -1,0 +1,78 @@
+{
+ "total": 2,
+ "jobPostings": [
+  {
+   "title": "Assistant General Counsel, Regulatory",
+   "externalPath": "/job/San-Francisco-CA/Assistant-General-Counsel--Regulatory_R0007515",
+   "locationsText": "3 Locations",
+   "postedOn": "Posted 7 Days Ago",
+   "bulletFields": [
+    "R0007515"
+   ]
+  },
+  {
+   "title": "Compliance Testing Manager",
+   "externalPath": "/job/San-Francisco-CA/Compliance-Testing-Manager_R0007511-1",
+   "locationsText": "3 Locations",
+   "postedOn": "Posted 12 Days Ago",
+   "bulletFields": [
+    "R0007511"
+   ]
+  }
+ ],
+ "facets": [
+  {
+   "facetParameter": "jobFamily",
+   "descriptor": "Department",
+   "values": [
+    {
+     "descriptor": "Compliance",
+     "id": "e5618e5d175c010bdb6936b0a8415f2c",
+     "count": 2
+    },
+    {
+     "descriptor": "Legal Counsel",
+     "id": "e5618e5d175c0199daa89ab0a8419b2c",
+     "count": 1
+    },
+    {
+     "descriptor": "Data and Analytics",
+     "id": "4be1d48275a401c8680329f450014e04",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "facetParameter": "locationMainGroup",
+   "values": [
+    {
+     "facetParameter": "locations",
+     "descriptor": "Locations",
+     "values": [
+      {
+       "descriptor": "San Francisco, CA",
+       "id": "62b5a6ab7a95013d0504a222b1601125",
+       "count": 27
+      },
+      {
+       "descriptor": "Lehi, UT",
+       "id": "8507408562c40135aebb9502e7029419",
+       "count": 8
+      },
+      {
+       "descriptor": "New York,  NY",
+       "id": "0e0bece1e96e01cc0d5d99c50f0c865d",
+       "count": 4
+      },
+      {
+       "descriptor": "United States-Remote",
+       "id": "62b5a6ab7a95014c284fd555b1602a25",
+       "count": 4
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "userAuthenticated": false
+}

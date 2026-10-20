@@ -335,7 +335,7 @@ class ConfigTests(unittest.TestCase):
     def test_every_company_uses_a_known_provider_and_has_what_it_needs(self):
         names = set()
         for c in CFG["companies"]:
-            self.assertIn(c["provider"], ("greenhouse", "lever", "ashby", "workday", "amazon", "google", "apple", "browser", "hn", "avature", "deshaw", "oracle", "tiktok", "atlassian", "jibe", "gem", "rippling", "uber", "ashby_html", "morganstanley", "intuit", "workable", "sitemap_jobs"))
+            self.assertIn(c["provider"], ("greenhouse", "lever", "ashby", "workday", "amazon", "google", "apple", "browser", "hn", "avature", "deshaw", "oracle", "tiktok", "atlassian", "jibe", "gem", "rippling", "uber", "ashby_html", "morganstanley", "intuit", "workable", "sitemap_jobs", "teamtailor_rss", "email_alert", "guardant", "recruitee"))
             self.assertTrue(c["name"])
             self.assertNotIn(c["name"], names)
             names.add(c["name"])
@@ -347,9 +347,11 @@ class ConfigTests(unittest.TestCase):
                 self.assertTrue(c["host"] and "/" not in c["host"] and c["site"])   # Oracle Cloud or a company domain in front of it (Dell)
             elif c["provider"] == "avature":
                 self.assertTrue(c["search"].startswith("https://"))          # the readers only follow links on this host
+            elif c["provider"] == "teamtailor_rss":
+                self.assertTrue(c.get("feed_url", "").startswith("https://"))
             elif c["provider"] == "sitemap_jobs":
                 self.assertTrue(c["sitemap_url"].startswith("https://") and c["job_path"].startswith("/"))
-            elif c["provider"] not in ("morganstanley", "intuit", "amazon", "google", "apple", "browser", "hn", "deshaw", "tiktok", "atlassian", "uber"):
+            elif c["provider"] not in ("guardant", "morganstanley", "intuit", "amazon", "google", "apple", "browser", "hn", "deshaw", "tiktok", "atlassian", "uber"):
                 self.assertTrue(c["slug"])
 
 

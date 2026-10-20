@@ -3,6 +3,7 @@ import asyncio
 import html as html_lib
 import json
 import re
+from email.utils import parsedate_to_datetime
 from html.parser import HTMLParser
 from urllib.parse import urlsplit, urljoin, urlencode, quote, unquote
 from xml.etree import ElementTree
@@ -469,8 +470,202 @@ async def read(company, cfg, public, seen_path=None):
             return await fetch_intuit(company, cfg, public, seen_path)
         if company['provider'] == 'workable':
             return await fetch_workable(company, cfg, public, seen_path)
+        if company["provider"] == "recruitee":
+            return await fetch_recruitee(company, public)
+        if company["provider"] == "guardant":
+            return await fetch_guardant(company, public)
+        if company["provider"] == "teamtailor_rss":
+            return await fetch_teamtailor(company, public)
         return await fetch_sitemap(company, cfg, public, seen_path)
     try:
         return await asyncio.wait_for(run(), timeout=20)
     except TimeoutError:
         return [], 'public source exceeded 20-second budget'
+
+
+def teamtailor_jobs(page, company):
+    """Parse the publisher's public Teamtailor RSS, including per-job locations."""
+    root = ElementTree.fromstring(page)
+    if root.tag != "rss" or root.find("channel") is None:
+        raise ValueError("not an RSS job feed")
+    out = []
+    namespace = {"tt": "https://teamtailor.com/locations"}
+    for item in root.findall("./channel/item")[:250]:
+        title, url = item.findtext("title", ""), item.findtext("link", "")
+        parts = urlsplit(url)
+        if parts.scheme != "https" or parts.netloc != urlsplit(company["feed_url"]).netloc or not parts.path.startswith("/jobs/"):
+            continue
+        description = item.find("description")
+        text = _clean(html_lib.unescape(ElementTree.tostring(description, encoding="unicode"))) if description is not None else ""
+        if not title or not text:
+            continue
+        locations = []
+        for place in item.findall("tt:locations/tt:location", namespace):
+            location = ", ".join(filter(None, (place.findtext("tt:city", "", namespace), place.findtext("tt:country", "", namespace))))
+            if location:
+                locations.append(location)
+        published = item.findtext("pubDate", "")
+        try:
+            published = parsedate_to_datetime(published).isoformat()
+        except (ValueError, TypeError, OverflowError):
+            published = ""
+        remote = item.findtext("remoteStatus", "").casefold() in ("fully", "fully_remote", "remote")
+        out.append({"key": "page:" + url, "company": company["name"], "title": title,
+                    "url": url, "location": "; ".join(dict.fromkeys(locations)), "remote": remote,
+                    "published": published, "text": text, "employment": "", "pay": pay_from_text(text),
+                    "details_checked": True, "location_verified": bool(locations)})
+    return out
+
+
+async def fetch_teamtailor(company, public):
+    status, page = await public.text(company["feed_url"])
+    if status != 200:
+        return [], f"RSS HTTP {status}"
+    try:
+        return teamtailor_jobs(page, company), None
+    except (ElementTree.ParseError, ValueError, TypeError):
+        return [], "invalid RSS job feed"
+
+
+async def fetch_guarded_rippling(company, cfg, public):
+    """One board request and at most two candidate details, inside a 20s caller budget."""
+    from jobs import fetch_rippling, rippling_detail, RIPPLING
+    found, error = await fetch_rippling(company, public.json)
+    if error:
+        return [], error
+    candidates = [j for j in found if score_job(dict(j, tier=company.get("tier", 0)), cfg)]
+    candidates.sort(key=lambda j: (-bool(re.search(r"junior|early.career|new.grad", j["title"], re.I)), j["key"]))
+    out = []
+    for job in candidates[:DETAIL_CAP]:
+        status, data = await public.json(RIPPLING.format(slug=company["slug"]) + "/" + job["rippling_id"])
+        if status != 200 or not isinstance(data, dict):
+            return out, f"posting HTTP {status}"
+        if rippling_detail(job, data) and job["text"]:
+            job["details_checked"] = True
+            out.append(job)
+    return found, None
+
+
+async def fetch_guarded_workday(company, cfg, public, now=None):
+    """At most four listing calls and two details, with a 20s caller deadline."""
+    from jobs import fetch_workday, _html_text, pay_from_text
+    calls = 0
+    failure = None
+    async def bounded_json(url, body=None):
+        nonlocal calls, failure
+        calls += 1
+        if calls > 4:
+            return 200, {"jobPostings": [], "total": 0}
+        status, data = await public.json(url, body)
+        if status != 200:
+            failure = f"listing HTTP {status}"
+        return status, data
+    found, error = await fetch_workday(dict(company, page_cap=1), bounded_json, now)
+    if error or failure:
+        return found, error or failure
+    candidates = [j for j in found if score_job(dict(j, tier=company.get("tier", 0)), cfg, now)]
+    candidates.sort(key=lambda j: (-bool(re.search(r"junior|early.career|new.grad", j["title"], re.I)), j["key"]))
+    base = f"https://{company['host']}/wday/cxs/{company['tenant']}/{company['site']}"
+    for job in candidates[:DETAIL_CAP]:
+        status, data = await public.json(base + job["wd_path"])
+        info = data.get("jobPostingInfo", {}) if isinstance(data, dict) else {}
+        if status != 200 or not info.get("jobDescription"):
+            return found, f"posting unavailable (HTTP {status})"
+        job["text"] = _html_text(info["jobDescription"])
+        job["employment"] = info.get("timeType", "")
+        job["details_checked"] = True
+        job["pay"] = pay_from_text(job["text"])
+        if any(term in job["employment"].casefold() for term in ("part", "intern", "contract", "temp")):
+            job["text"] = ""  # Guarded scan skips this incomplete, non-full-time record.
+    return found, None
+
+
+def guardant_jobs(payload, company):
+    """Normalize the complete job descriptions published by the site's own widget."""
+    data = payload.get('data') if isinstance(payload, dict) else None
+    rows = data.get('data') if isinstance(data, dict) else None
+    if not payload.get('success') or not isinstance(rows, list):
+        raise ValueError('invalid public listing payload')
+    out = []
+    for raw in rows[:250]:
+        if not isinstance(raw, dict):
+            continue
+        url = raw.get('url') or ''
+        parts = urlsplit(url)
+        # Match the publisher's widget: private-posting URLs are not advertised.
+        if (parts.scheme != 'https' or parts.username or parts.password or re.search('private_posting', url, re.I)
+                or not raw.get('id') or not raw.get('title')):
+            continue
+        places = [raw.get('primaryLocation') or {}] + (raw.get('additionalLocations') or [])
+        location = '; '.join(dict.fromkeys(p['descriptor'] for p in places if isinstance(p, dict) and p.get('descriptor')))
+        text = _clean(html_lib.unescape(raw.get('jobDescription') or ''))
+        if not text:
+            continue
+        out.append({'key': f"guardant:{raw['id']}", 'company': company['name'], 'title': raw['title'],
+                    'url': url, 'location': location, 'remote': bool(re.search(r'\bremote\b', location, re.I)),
+                    'text': text, 'published': raw.get('startDate') or '',
+                    'employment': (raw.get('timeType') or {}).get('descriptor', ''), 'pay': pay_from_text(text),
+                    'details_checked': True, 'location_verified': bool(location)})
+    return out
+
+
+async def fetch_guardant(company, public):
+    page_url = 'https://www.guardanthealth.com/careers/jobs/'
+    status, page = await public.text(page_url)
+    match = re.search(r'var workdayApi\s*=\s*(\{.*?\});', page or '') if status == 200 else None
+    if not match:
+        return [], f'public widget configuration unavailable (HTTP {status})'
+    try:
+        config = json.loads(match[1])
+        # This is a PUBLIC listing/search nonce openly embedded in the careers
+        # page, not a private API key or login credential. Refresh it each scan.
+        # The read-only WordPress listing action accepts GET as well as the
+        # widget's POST. No application or other action is called.
+        endpoint = 'https://www.guardanthealth.com/wp-admin/admin-ajax.php'
+        if config.get('ajax_url') != endpoint or not re.fullmatch(r'[a-zA-Z0-9]+', config.get('nonce', '')):
+            return [], 'unexpected public widget configuration'
+        url = endpoint + '?' + urlencode({'action': 'get_workday_data', 'nonce': config['nonce']})
+        status, data = await public.json(url)
+        if status != 200:
+            return [], f'public listing HTTP {status}'
+        return guardant_jobs(data, company), None
+    except (ValueError, TypeError, AttributeError):
+        return [], 'invalid public listing payload'
+
+
+def recruitee_jobs(payload, company):
+    """Recruitee's public careers offers, including full requirements and locations."""
+    if not isinstance(payload, dict) or not isinstance(payload.get('offers'), list):
+        raise ValueError('invalid public offers')
+    host = company['slug'] + '.recruitee.com'
+    out = []
+    for raw in payload['offers'][:250]:
+        if not isinstance(raw, dict):
+            continue
+        url = raw.get('careers_url') or ''
+        if urlsplit(url).scheme != 'https' or urlsplit(url).netloc != host:
+            continue
+        title = raw.get('title') or ''
+        text = _clean(html_lib.unescape((raw.get('description') or '') + ' ' + (raw.get('requirements') or '')))
+        places = raw.get('locations') or []
+        locations = [', '.join(str(p[k]).strip() for k in ('city', 'state', 'country') if p.get(k)) for p in places if isinstance(p, dict)]
+        location = '; '.join(dict.fromkeys(filter(None, locations))) or raw.get('location', '')
+        if title and text and raw.get('id'):
+            out.append({'key': f"recruitee:{company['name']}:{raw['id']}", 'company': company['name'],
+                        'title': title, 'url': url, 'location': location, 'remote': bool(raw.get('remote')),
+                        'text': text, 'published': raw.get('published_at') or '',
+                        'employment': str(raw.get('employment_type_code') or '').replace('_', ' '),
+                        'pay': pay_from_text(text), 'details_checked': True, 'location_verified': bool(locations)})
+    return out
+
+
+async def fetch_recruitee(company, public):
+    if not re.fullmatch(r'[a-z0-9-]+', company.get('slug', '')):
+        return [], 'invalid public board name'
+    status, data = await public.json(f"https://{company['slug']}.recruitee.com/api/offers/")
+    if status != 200:
+        return [], f'public offers HTTP {status}'
+    try:
+        return recruitee_jobs(data, company), None
+    except (ValueError, TypeError):
+        return [], 'invalid public offers'

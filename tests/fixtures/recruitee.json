@@ -1,0 +1,37 @@
+{
+ "offers": [
+  {
+   "id": 2521149,
+   "title": "Developer Relations",
+   "careers_url": "https://aikidosecurity.recruitee.com/o/developer-relations",
+   "description": "<p class=\"MsoNormal\"><strong>Location: San Francisco</strong></p><p style=\"min-height: 1.7em;\"></p><p class=\"MsoNormal\"><strong>🌍 We’re making security suck less for developers.</strong></p><p class=\"MsoNormal\">Security tools haven’t kept up with how software is built today. They interrupt teams, slow releases, and turn security into a bottleneck instead of a capability. We built Aikido to change that. Aikido builds developer-first security products that reduce real risk without getting in the way of shipping software. We focus on what actually matters and automate the rest.</p><p class=\"MsoNormal\">We’re taking on legacy security tools teams have been stuck with, and we’re winning. If you want to help us take market share and build products developers actually enjoy using, you’re in the right place.</p><p class=\"MsoNormal\"><br>Founded in 2022 by third-time founders, Aikido has $85M in the bank, a long runway ahead, and unicorn status. We’re building toward self-securing software. Join an all-star team. Take real ownership. Push boundaries. Build things that matter.</p><p style=\"min-height: 1.7em;\"></p><p>We’re looking for someone in Developer Relations (DevRel) who is actively engaged in the developer community and well-connected across the developer ecosystem. </p><p style=\"min-height: 1.7em;\"></p><p>This is a hands-on, community-first role, not a content-only or purely strategic position. You’ll be actively engaging with developers in the real world: showing up at meetups, hackathons, demo days, and industry events, building genuine relationships, and helping shape how the developer community experiences and talks about Aikido.</p><p style=\"min-height: 1.7em;\"></p><p>Responsibilties</p><ul><li><p>Be highly visible in the SF developer community (meetups, hackathons, demo days, conferences, informal events) </p></li><li><p>Build and maintain relationships with developers, founders, platform engineers, DevOps engineers, and security-minded builders</p></li><li><p>Represent Aikido at developer meetups, conferences, and community events</p></li><li><p>Help organize and host Aikido meetups, happy hours, workshops, and developer events</p></li><li><p>Actively engage with the developer community online (X, Slack, Discord, developer forums)</p></li><li><p>Collaborate with marketing and product to: Support launches, Amplify events, and turn community insights into better messaging. </p></li><li><p>Help grow Aikido’s reputation as a developer-first security company</p></li></ul>",
+   "requirements": "<ul><li><p>Experience in Developer Relations, Developer Advocacy (DevRel), community leadership, or developer marketing</p></li><li><p>Background working with developer tools, DevOps platforms, or security products is a strong plus </p></li><li><p>Already active in the developer ecosystem, regularly attends meetups, events, or community gatherings </p></li><li><p>Has an existing developer network or is a recognizable face within parts of the developer community </p></li><li><p>Bonus: runs or contributes to personal content channels (blog, newsletter, YouTube, podcast, social presence) </p></li><li><p>Comfortable talking with developers and engineers, technical curiosity matters more than being an expert \\</p></li><li><p>Social, approachable, and genuinely enjoys meeting people </p></li><li><p>Proactive, self-directed, and comfortable operating with a high level of autonomy </p></li><li><p>Based in San Francisco and excited to be in-person and out in the developer community</p></li></ul><h3></h3><p>What you can expect</p><ul><li><p>Short decision lines. Big ownership. Shape the projects that matter and ship fast.</p></li><li><p>Grow as fast as we do. Take on more, own more, and carve out your own path.</p></li><li><p>Top-tier tech pay and equity.</p></li><li><p>High trust, strong values, zero corporate BS.</p></li><li><p>Flexibility in working hours.</p></li><li><p>A company that sticks to its values in an open and informal atmosphere.</p></li></ul><p>We hire for talent, drive, and potential. Everything else is noise.</p><p style=\"min-height: 1.7em;\"></p><p style=\"min-height: 1.7em;\"></p>",
+   "locations": [
+    {
+     "id": 254154,
+     "name": "San Francisco",
+     "state": "California",
+     "country": "United States",
+     "city": "San Francisco",
+     "translations": {
+      "en": {
+       "name": "San Francisco",
+       "city": "San Francisco",
+       "postal_code": null,
+       "street": null,
+       "note": null
+      }
+     },
+     "country_code": "US",
+     "state_code": "CA",
+     "postal_code": null,
+     "street": null,
+     "note": null
+    }
+   ],
+   "remote": false,
+   "published_at": "2026-09-21 18:41:33 UTC",
+   "employment_type_code": "fulltime_permanent"
+  }
+ ]
+}

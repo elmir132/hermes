@@ -5310,6 +5310,532 @@
    },
    "tier": 3,
    "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Farther",
+   "provider": "greenhouse",
+   "slug": "fartherfinance",
+   "public_feed": true,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "Pave",
+   "provider": "greenhouse",
+   "slug": "paveakatroveinformationtechnologies",
+   "public_feed": true,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "Nimble Robotics",
+   "provider": "greenhouse",
+   "slug": "nimblerobotics",
+   "public_feed": true,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "Convex",
+   "provider": "ashby",
+   "slug": "convex-dev",
+   "public_feed": true,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "Rutter",
+   "provider": "ashby",
+   "slug": "rutter",
+   "public_feed": true,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "Treasury Prime",
+   "provider": "greenhouse",
+   "slug": "treasuryprime",
+   "public_feed": true,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "AtScale",
+   "provider": "rippling",
+   "slug": "atscale",
+   "guarded": true,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "Spotnana",
+   "provider": "gem",
+   "slug": "spotnana",
+   "guarded": true,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "Lindy",
+   "provider": "teamtailor_rss",
+   "feed_url": "https://careers.lindy.ai/jobs.rss",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": true
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "LendingClub",
+   "provider": "workday",
+   "guarded": true,
+   "host": "lendingclub.wd1.myworkdayjobs.com",
+   "tenant": "lendingclub",
+   "site": "External",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "ServiceTitan",
+   "provider": "workday",
+   "guarded": true,
+   "host": "servicetitan.wd1.myworkdayjobs.com",
+   "tenant": "servicetitan",
+   "site": "ServiceTitan",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "Alation",
+   "provider": "workday",
+   "guarded": true,
+   "host": "alation.wd503.myworkdayjobs.com",
+   "tenant": "alation",
+   "site": "ExternalSite",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "LILT",
+   "provider": "ashby",
+   "slug": "lilt-corporate",
+   "public_feed": true,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "Guardant Health",
+   "provider": "guardant",
+   "tier": 3,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "Aikido Security",
+   "provider": "recruitee",
+   "slug": "aikidosecurity",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "Cedar",
+   "provider": "greenhouse",
+   "slug": "careportalinc",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "Dandy",
+   "provider": "ashby",
+   "slug": "dandy",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "Essential AI",
+   "provider": "ashby",
+   "slug": "essentialai",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "LeanData",
+   "provider": "ashby",
+   "slug": "LeanData",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "Redis",
+   "provider": "ashby",
+   "slug": "redis",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "SonderMind",
+   "provider": "ashby",
+   "slug": "sondermind",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "Unit",
+   "provider": "ashby",
+   "slug": "unit",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "Aven",
+   "provider": "ashby",
+   "slug": "aven",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "Chalk",
+   "provider": "ashby",
+   "slug": "chalk",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "Composio",
+   "provider": "ashby",
+   "slug": "composio",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "Finch",
+   "provider": "lever",
+   "slug": "finch",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "Flock Homes",
+   "provider": "greenhouse",
+   "slug": "flockhomes",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "Freed",
+   "provider": "ashby",
+   "slug": "freed",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "MotherDuck",
+   "provider": "ashby",
+   "slug": "MotherDuck",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "OpenGov",
+   "provider": "ashby",
+   "slug": "opengov",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "Railway",
+   "provider": "ashby",
+   "slug": "railway",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "Vise",
+   "provider": "ashby",
+   "slug": "vise",
+   "public_feed": true,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "EvenUp",
+   "provider": "ashby_html",
+   "slug": "evenup",
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting.",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3
+  },
+  {
+   "name": "Trigger.dev",
+   "provider": "ashby",
+   "slug": "triggerdev",
+   "public_feed": true,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
+  },
+  {
+   "name": "ReCharge",
+   "provider": "ashby",
+   "slug": "recharge",
+   "public_feed": true,
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates; sponsorship is unknown unless stated in a checked posting."
   }
  ],
  "strong_title": [

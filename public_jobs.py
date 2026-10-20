@@ -1,6 +1,7 @@
 """Conservative transport for new public job sources, with no credentials or retries."""
 import asyncio
 import json
+import re
 import time
 from urllib.parse import urljoin, urlsplit
 from urllib.robotparser import RobotFileParser
@@ -49,7 +50,8 @@ class PublicJobsClient:
     """Each URL once, exact-path robots checks, checked redirects, pause per host.
 
     A new instance is scoped to one scan. A 403/429 stops the whole origin.
-    Unavailable robots (except 404/410) fail closed; no browser or API fallback.
+    Robots 4xx except 429 means no rules (RFC 9309); 5xx/unreachable
+    policies fail closed. Ordinary page 403/429 still stops the origin.
     raw(url) is injectable for tests and returns (status, headers, text).
     """
     def __init__(self, raw=None, pause=1.0, timeout=25):
@@ -83,7 +85,7 @@ class PublicJobsClient:
                 return exc.code, dict(exc.headers), exc.read(100_000).decode("utf-8", "replace")
         return await asyncio.to_thread(read)
 
-    async def _request(self, url, delay, body=None):
+    async def _request(self, url, delay, body=None, policy_request=False):
         origin = self._origin(url)
         key = url if body is None else (url, json.dumps(body, sort_keys=True))
         # Several boards share one ATS host. Serialize requests there so
@@ -102,7 +104,7 @@ class PublicJobsClient:
             self.last[origin] = time.monotonic()
             self.cache[key] = result
             self.requests.append({'url': url, 'status': result[0]})
-            if result[0] in (403, 429):
+            if result[0] == 429 or (result[0] == 403 and not policy_request):
                 self.stopped.add(origin)
             return result
 
@@ -113,20 +115,40 @@ class PublicJobsClient:
             raise ValueError('public jobs require an HTTPS URL without credentials')
         return f'https://{parts.netloc}'
 
+    @staticmethod
+    def _challenge(text):
+        return bool(re.search(r'/_fs-ch-|<title>\s*(?:Just a moment|Access Denied)|cf_chl_opt|verify you are human', text, re.I))
+
+    async def _robots(self, origin):
+        url = origin + '/robots.txt'
+        for _ in range(6):
+            self._origin(url)  # Reject credentials and non-HTTPS redirects.
+            status, headers, policy = await self._request(url, self.pause, policy_request=True)
+            if status in (301, 302, 303, 307, 308):
+                location = headers.get('location') or headers.get('Location')
+                if not location:
+                    break
+                url = urljoin(url, location)
+                continue
+            if 400 <= status < 500 and status != 429:
+                return ''
+            if status == 200 and not self._challenge(policy):
+                return policy
+            break
+        return 'User-agent: *\nDisallow: /'
+
     async def text(self, url, depth=0, body=None):
         origin = self._origin(url)
         if origin not in self.policies:
-            status, _, policy_text = await self._request(origin + '/robots.txt', self.pause)
-            if status in (404, 410):
-                policy_text = ''
-            elif status != 200:
-                policy_text = 'User-agent: *\nDisallow: /'
-            self.policies[origin] = robots_policy(policy_text)
+            self.policies[origin] = robots_policy(await self._robots(origin))
         parser, groups = self.policies[origin]
         if not parser.can_fetch(USER_AGENT, url) or any(not p.can_fetch(USER_AGENT, url) for p in groups):
             return 0, ''
         delay = max(self.pause, parser.crawl_delay(USER_AGENT) or 0)
         status, headers, response = await self._request(url, delay, body)
+        if status == 200 and self._challenge(response):
+            self.stopped.add(origin)
+            return 0, ''
         if status in (301, 302, 303, 307, 308):
             location = headers.get('location') or headers.get('Location')
             if location and depth < 5:

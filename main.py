@@ -1572,11 +1572,18 @@ LAST_FIT: dict = {}           # job url -> resume name suggested by /fit
 
 async def run_jobs(mark: bool = True, include_seen: bool = False) -> str:
     cfg = await asyncio.to_thread(jobs.load_config)
+    alert_jobs, alert_errors = [], []
+    if os.environ.get("HERMES_JOB_ALERT_RECORDS") == "1" and digest.parse_job_alert_senders():
+        import job_alerts
+        accounts = await asyncio.to_thread(_all_creds)
+        alert_jobs, alert_errors = await job_alerts.fetch_records([(name, creds.token) for name, creds in accounts], _digest_get, DB_PATH)
     shown: list = []
     text, _, _ = await jobs.scan(cfg, _jobs_get, DB_PATH, mark=mark, include_seen=include_seen,
-                                 collect=shown, get_html=_jobs_get_html)
+                                 collect=shown, get_html=_jobs_get_html, alert_jobs=alert_jobs)
     if shown:
         LAST_JOBS[:] = shown
+    if alert_errors:
+        text += "\nJob alerts: " + "; ".join(alert_errors[:3])
     return text
 
 async def _jobs_loop():
