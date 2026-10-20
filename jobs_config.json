@@ -5058,6 +5058,258 @@
    },
    "tier": 3,
    "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Acorns",
+   "provider": "ashby",
+   "slug": "acorns",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "AKASA",
+   "provider": "ashby",
+   "slug": "akasa",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Bubble",
+   "provider": "ashby",
+   "slug": "bubble",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Cambly",
+   "provider": "ashby",
+   "slug": "cambly",
+   "ratings": {
+    "pay": 3,
+    "prestige": 2,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 4,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Color Health",
+   "provider": "ashby",
+   "slug": "color-health",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Grow Therapy",
+   "provider": "ashby",
+   "slug": "grow-therapy",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Headway",
+   "provider": "ashby",
+   "slug": "headway",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Hinge Health",
+   "provider": "ashby",
+   "slug": "hinge-health",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Hopper",
+   "provider": "ashby",
+   "slug": "hopper",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Ironclad",
+   "provider": "ashby",
+   "slug": "ironcladhq",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Juniper Square",
+   "provider": "ashby",
+   "slug": "junipersquare",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Luma AI",
+   "provider": "ashby",
+   "slug": "lumaai",
+   "ratings": {
+    "pay": 5,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 2,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "NerdWallet",
+   "provider": "ashby",
+   "slug": "nerdwallet",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Persona",
+   "provider": "ashby",
+   "slug": "persona",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "PostHog",
+   "provider": "ashby",
+   "slug": "posthog",
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 4,
+    "exits": 4,
+    "sponsor": null
+   },
+   "tier": 2,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Retell AI",
+   "provider": "ashby",
+   "slug": "retell-ai",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 2,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Tessera Labs",
+   "provider": "ashby",
+   "slug": "tessera-labs",
+   "ratings": {
+    "pay": 4,
+    "prestige": 3,
+    "wlb": 3,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
+  },
+  {
+   "name": "Thumbtack",
+   "provider": "ashby",
+   "slug": "thumbtack",
+   "ratings": {
+    "pay": 3,
+    "prestige": 3,
+    "wlb": 4,
+    "exits": 3,
+    "sponsor": null
+   },
+   "tier": 3,
+   "ratings_note": "Estimates from general knowledge, 2026-10-20; not measured data or a role sponsorship guarantee."
   }
  ],
  "strong_title": [
