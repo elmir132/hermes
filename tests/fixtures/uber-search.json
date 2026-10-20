@@ -1,0 +1,117 @@
+{
+  "jobs": [
+    {
+      "@search.score": 248.03204,
+      "Description": "<h3><strong>About the Role</strong></h3><p>Engineering at Uber means building for real-world impact under real-world constraints. You\u2019ll be responsible for the infrastructure that runs Uber\u2019s global stateful systems - over 20 types of technologies including MySQL, Redis, and Kafka - across 50,000+ hosts and exabytes of data.</p><p>This role is based in our Aarhus, Denmark office, a key global hub for Uber\u2019s Infrastructure and Platform teams. In Aarhus, we don\u2019t just use technology; we build the core systems that keep Uber moving. The work is massive in scale and high in stakes. You will navigate the tension between moving fast to increase fleet-wide efficiency and maintaining the extreme reliability required for systems that never sleep.</p><p>We are looking for an engineer eager to grow into a role with greater technical ownership and leadership. As our Stateful Platform team continues to scale, we need someone who can go beyond execution to formulate a north star vision for our products. You will be expected to drive the team toward that goal independently, staying steady through the regular disruptions that come with operating at our scale. If you thrive in high-ambiguity environments, value ownership over hierarchy, you will grow here.</p><h3><strong>What You\u2019ll Do</strong></h3><ul><li aria-level=\"1\"><strong>Design, build, and maintain</strong> the automation frameworks that deploy and run all database engines globally, ensuring high availability across on-prem and multiple cloud environments.</li><li aria-level=\"1\"><strong>Solve high-impact infrastructure problems</strong> where the solution isn't always obvious - such as automating kernel upgrades or storage cluster expansions across millions of containers.</li><li aria-level=\"1\"><strong>Build and own</strong> services written in Go, focusing on system reliability, resource forecasting, and intelligent placement to maximize utilization.</li><li aria-level=\"1\"><strong>Navigate the messiness</strong> of technical debt and shifting priorities, ensuring every code change is backed by rigorous testing while maintaining a bias for action.</li><li aria-level=\"1\"><strong>Unblock fleet-wide efficiency</strong> by optimizing scheduling, with the goal of eliminating manual on-call operations through automation.</li><li aria-level=\"1\"><strong>Lead through influence</strong> by mentoring peers and collaborating across global engineering sites (SF, Amsterdam, Seattle, Bangalore) to ship practical solutions at speed.</li><li aria-level=\"1\"><strong>Engage with the local community</strong> by participating in or leading tech meetups hosted at our Aarhus office to share knowledge and drive engineering excellence locally.</li></ul><p>Discover what we're building at Uber Aarhus on our blog: <a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.uber.com/dk/en/blog/engineering/aarhus/\">https://www.uber.com/dk/en/blog/engineering/aarhus/</a></p><h3><strong>Basic Qualifications</strong></h3><ul><li aria-level=\"1\"><strong>5+ years</strong> of professional software development experience.</li><li aria-level=\"1\"><strong>Proficiency</strong> in at least one backend language (e.g., Go, Java, Python).</li><li aria-level=\"1\"><strong>Experience with</strong> software engineering fundamentals, including testing methodologies and quality documentation.</li><li aria-level=\"1\"><strong>Technical depth</strong> in building or managing distributed systems at scale.</li><li aria-level=\"1\"><strong>Demonstrated ability</strong> to lead technical direction and help a team navigate through ambiguity and complex organizational changes.</li></ul><h3><strong>Preferred Qualifications</strong></h3><ul><li aria-level=\"1\"><strong>Experience with</strong> containerization and orchestration (e.g., Docker, Kubernetes).</li><li aria-level=\"1\"><strong>Knowledge of</strong> database and stateful systems (e.g., MySQL, Kafka, HDFS, or Redis).</li><li aria-level=\"1\"><strong>A mindset for automation</strong>\u2014specifically a track record of replacing manual processes with self-healing systems.</li></ul><p><strong>Perks & Benefits:</strong></p><ul><li aria-level=\"1\"><strong>Monthly Uber Credits:</strong> Credits to use on Uber Rides and Uber Eats every month.</li><li aria-level=\"1\"><strong>Equity Compensation:</strong> Opportunity to be awarded stock options (RSUs) to ensure you own a piece of the mission you\u2019re building.</li><li aria-level=\"1\"><strong>Culture & Socials:</strong> Frequent local social events and office clubs (chess, board games, running, crossfit, creative club and more)</li><li aria-level=\"1\"><strong>Tech Community:</strong> We host regular local tech meetups to stay connected with the Aarhus engineering scene, and give our engineers the opportunity to sometimes share what they\u2019re working on with the community</li><li aria-level=\"1\"><strong>Well-being & Fertility:</strong> Global support programs for mental health, wellness, and family planning/fertility.</li><li aria-level=\"1\"><strong>Parental Leave:</strong> Generous, gender-neutral parental leave to support your life outside of work.</li><li aria-level=\"1\"><strong>Modern Aarhus Hub:</strong> Work in a center of technical excellence featuring catered lunches and top-tier collaboration spaces.</li></ul><p><strong>Ready to ride?</strong> Uber\u2019s mission is to reimagine the way the world moves for the better. Here, bold ideas create real-world impact, challenges drive growth, and speed fuels progress. This isn\u2019t the kind of place where you follow a playbook - it\u2019s where you help write one. If you\u2019re driven by impact, energized by challenge, and ready to shape how the world moves, this is the place for you. What moves us, moves the world - let\u2019s move it forward, together. </p><p><strong>Working Style & Accommodations:</strong> Offices remain key to collaboration and Uber\u2019s culture. Our Aarhus office is a hub where deep engineering happens in a highly collaborative environment. Unless approved for full remote work, employees must spend at least Tuesday, Wednesday, and Thursday in-office. Ask your Recruiter for details about this role\u2019s requirements.</p><p><em>Uber is proud to be an Equal Opportunity/Affirmative Action employer. All qualified applicants will receive consideration for employment without regard to sex, gender identity, sexual orientation, race, color, religion, national origin, disability, protected Veteran status, age, or any other characteristic protected by law. We also consider qualified applicants regardless of criminal histories, consistent with legal requirements. If you have a disability or special need that requires accommodation, please let us know by completing this form.</em></p> <p><strong>Ready to Ride?</strong></p> <p>This isn't the kind of place where you follow a playbook \u2014 it's where you help write one. If you're driven by impact, energized by challenge, and ready to shape how the world moves \u2014 we'd love to hear from you.</p> <p>You may be eligible for bonuses, equity, and other compensation, as well as a range of benefits. <a href=\"https://jobs.uber.com/en/benefits/\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">Explore our benefits.</a></p> <p>Offices remain key to collaboration and Uber's culture. Unless approved for full remote work, employees must spend at least 50% of their time in-office. Some roles, like those at greenlight hubs, require full-time in-office presence. Ask your Recruiter for details about this role's requirements.</p> <p>Uber is proud to be an Equal Opportunity employer. All qualified applicants will receive consideration for employment without regard to sex, gender identity, sexual orientation, race, color, religion, national origin, disability, protected Veteran status, age, or any other characteristic protected by law. We also consider qualified applicants regardless of criminal histories, consistent with legal requirements. If you have a disability or special need that requires accommodation, please let us know by completing <a href=\"https://forms.gle/aDWTk9k6xtMU25Y5A?uclick_id=d56eb634-bfb9-455e-a50d-901b3de0490c\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">this form.</a></p>",
+      "AdditionalText": "Engineer Software Engineering",
+      "QuestionsRaw": null,
+      "Summary": null,
+      "AdditionalDescription1": null,
+      "DisplayDate": "2026-10-15T14:18:08Z",
+      "Reference": "303326",
+      "Teams": [
+        "Engineer"
+      ],
+      "ContractType": "Full time",
+      "WorkPattern": "Regular",
+      "ExperienceLevel": null,
+      "Remote": false,
+      "Id": "303326",
+      "Title": "Senior Software Engineer - Storage Platform",
+      "Salary": {
+        "MinValue": null,
+        "MaxValue": null,
+        "Currency": null,
+        "Period": null,
+        "Description": ""
+      },
+      "Locations": [
+        {
+          "Identifier": "",
+          "City": "Midtjylland",
+          "Region": "",
+          "Country": "Denmark",
+          "CountryCode": null,
+          "Address": "Central Denmark Region, Denmark",
+          "PostalCode": null,
+          "LocationPoint": {
+            "type": "Point",
+            "coordinates": [
+              9.3027769,
+              56.302139
+            ],
+            "crs": {
+              "type": "name",
+              "properties": {
+                "name": "EPSG:4326"
+              }
+            }
+          }
+        }
+      ],
+      "Urls": [
+        {
+          "Culture": "en-us",
+          "Url": "/en/jobs/303326/",
+          "IsDefault": true
+        }
+      ]
+    },
+    {
+      "@search.score": 240.41136,
+      "Description": "<h3><strong>About the Role</strong></h3><h3><strong>What we do</strong></h3><p>The Experimentation team provides cutting edge tooling and methodologies for all teams at Uber to make rapid decisions for their product iterations. Experimentation is an exciting domain that combines multiple disciplines of Software Engineering (Backend, Distributed Systems, Mobile, Web, Data Infra), Data Science, and Product Design.&nbsp;</p><p>Every major launch across any of Uber\u2019s Rides, Delivery, Earner, Freight, and Uber For Business (U4B) organizations leverages the Experimentation platform to determine how new features impact key business metrics. Virtually all Engineers, Scientists, and Product Managers at the company use our platform on a daily basis to launch, monitor, test, and make changes to Uber\u2019s ecosystem.</p><h3><strong>Why it matters</strong></h3><ul><li aria-level=\"1\"><strong>Velocity with Confidence</strong>: By automating experiment design, rollout, and analysis, we reduce the cost of iteration and let teams validate the impact of features our members love.</li><li aria-level=\"1\"><strong>Company Wide Reach</strong>: Virtually every engineer, data scientist, and product manager touches our platform daily to launch, monitor, and refine Uber\u2019s ecosystem.</li><li aria-level=\"1\"><strong>Business Impact at Scale</strong>: Decisions backed by our tooling safeguard core metrics while empowering innovators to push boundaries.</li></ul><h3><strong>Basic Qualifications</strong></h3><ul><li aria-level=\"1\">Bachelor's or Master\u2019s degree in Computer Science or a related technical field, or equivalent experience in an engineering related bootcamp</li><li aria-level=\"1\">2+ years of experience in professional software development experience, developing and deploying systems in production environments</li><li aria-level=\"1\">Proven skills writing efficient, clean code in Go, Java, or Python</li><li aria-level=\"1\">Ability to debug and fix software bugs in a production scale environment</li><li aria-level=\"1\">Experience with software engineering best practices</li><li aria-level=\"1\">Strong grasp of distributed-systems fundamentals: caching, sharding, consensus, fault tolerance, observability, and incident response</li><li aria-level=\"1\">Excellent written and verbal communication skills, including the ability to document architectures and algorithms</li></ul><h3><strong>Preferred Qualifications</strong></h3><ul><li aria-level=\"1\">Advanced coursework or industry background in statistics, causal inference, or experimental design.</li><li aria-level=\"1\">Direct ownership of experiment analysis workflows (A/B, quasi-experimental, marketplace simulations) at scale.<ul><li aria-level=\"2\">Python, Pandas, PySpark</li><li aria-level=\"2\">Data Pipelines (e.g. Spark, Scala)</li><li aria-level=\"2\">Jupyter Notebooks</li></ul></li><li aria-level=\"1\">Professional experience with feature-flag and progressive-delivery systems (e.g. internal rollout platforms)</li></ul><h3><strong>What the Candidate Will Do</strong></h3><ul><li aria-level=\"1\">Be responsible for the design, implementation, and delivery of complex projects</li><li aria-level=\"1\">Build highly reliable and resilient features in our Go Backend microservices and Go + Java core evaluation libraries</li><li aria-level=\"1\">Work on high scale Tier 1 microservices & libraries processing 10M+ evaluations per second</li><li aria-level=\"1\">Utilize Cadence to orchestrate configuration updates in CRUD backend services</li><li aria-level=\"1\">Collaborate with cross-functional teams to enable and support the business</li><li aria-level=\"1\">Identify and fix bugs to improve the reliability of current systems</li><li aria-level=\"1\">Utilize software development best practices to ensure team owned systems, libraries, and microservices are reliable (monitoring, alerting, logging, etc)</li><li aria-level=\"1\">Design and document architectural solutions to complex engineering problems</li><li aria-level=\"1\">Bring in your passionate self and positively impact the team around you</li></ul> <p>For San Francisco, CA-based roles: The base salary range for this role is USD $171,000 per year - USD $190,000 per year.</p><p>You will be eligible to participate in Uber's bonus program, and may be offered an equity award & other types of comp. All full-time employees are eligible to participate in a 401(k) plan. You will also be eligible for various benefits.</p> <p><strong>Ready to Ride?</strong></p> <p>This isn't the kind of place where you follow a playbook \u2014 it's where you help write one. If you're driven by impact, energized by challenge, and ready to shape how the world moves \u2014 we'd love to hear from you.</p> <p>You may be eligible for bonuses, equity, and other compensation, as well as a range of benefits. <a href=\"https://jobs.uber.com/en/benefits/\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">Explore our benefits.</a></p> <p>Offices remain key to collaboration and Uber's culture. Unless approved for full remote work, employees must spend at least 50% of their time in-office. Some roles, like those at greenlight hubs, require full-time in-office presence. Ask your Recruiter for details about this role's requirements.</p> <p>Uber is proud to be an Equal Opportunity employer. All qualified applicants will receive consideration for employment without regard to sex, gender identity, sexual orientation, race, color, religion, national origin, disability, protected Veteran status, age, or any other characteristic protected by law. We also consider qualified applicants regardless of criminal histories, consistent with legal requirements. If you have a disability or special need that requires accommodation, please let us know by completing <a href=\"https://forms.gle/aDWTk9k6xtMU25Y5A?uclick_id=d56eb634-bfb9-455e-a50d-901b3de0490c\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">this form.</a></p>",
+      "AdditionalText": " ",
+      "QuestionsRaw": null,
+      "Summary": null,
+      "AdditionalDescription1": null,
+      "DisplayDate": "2026-10-16T21:53:35Z",
+      "Reference": "302533",
+      "Teams": [],
+      "ContractType": "Full time",
+      "WorkPattern": "",
+      "ExperienceLevel": null,
+      "Remote": false,
+      "Id": "302533",
+      "Title": "Software Engineer II - Engineer",
+      "Salary": {
+        "MinValue": null,
+        "MaxValue": null,
+        "Currency": null,
+        "Period": null,
+        "Description": "\n<p>For San Francisco, CA-based roles: The base salary range for this role is USD $171,000 per year - USD $190,000 per year.</p><p>You will be eligible to participate in Uber's bonus program, and may be offered an equity award & other types of comp. All full-time employees are eligible to participate in a 401(k) plan. You will also be eligible for various benefits.</p>"
+      },
+      "Locations": [
+        {
+          "Identifier": "",
+          "City": "San Francisco",
+          "Region": "California",
+          "Country": "United States",
+          "CountryCode": null,
+          "Address": "San Francisco, CA, USA",
+          "PostalCode": null,
+          "LocationPoint": {
+            "type": "Point",
+            "coordinates": [
+              -122.4194155,
+              37.7749295
+            ],
+            "crs": {
+              "type": "name",
+              "properties": {
+                "name": "EPSG:4326"
+              }
+            }
+          }
+        }
+      ],
+      "Urls": [
+        {
+          "Culture": "en-us",
+          "Url": "/en/jobs/302533/",
+          "IsDefault": true
+        }
+      ]
+    }
+  ],
+  "totalPages": 4
+}

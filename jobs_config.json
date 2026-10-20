@@ -2787,6 +2787,19 @@
     "sponsor": false
    },
    "tier": 4
+  },
+  {
+   "name": "Uber",
+   "provider": "uber",
+   "tier": 2,
+   "ratings": {
+    "pay": 4,
+    "prestige": 4,
+    "wlb": 2,
+    "exits": 5,
+    "sponsor": true
+   },
+   "ratings_note": "Estimates from general knowledge, 2026-10-19; not measured data or a role sponsorship guarantee."
   }
  ],
  "strong_title": [

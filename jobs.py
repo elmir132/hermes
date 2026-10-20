@@ -713,6 +713,63 @@ async def fetch_jibe(company: dict, get_json):
     return found, ("; ".join(dict.fromkeys(errors)) if errors else None)
 
 
+UBER_SEARCH = "https://jobs.uber.com/api/jobs/search/"
+UBER_PAGES = 4             # 400 results per query; no posting detail requests
+UBER_QUERIES = ("software engineer", "machine learning", "graduate")
+
+
+def uber_jobs(payload, company):
+    """The public careers site's own search response includes full descriptions.
+
+    Endpoint discovered in jobs.uber.com/en/jobs/'s openly served JavaScript.
+    No keys (public or private), cookies, browser headers or Oracle tenant used.
+    """
+    out = []
+    rows = payload.get("jobs", []) if isinstance(payload, dict) else []
+    for raw in rows if isinstance(rows, list) else []:
+        if not isinstance(raw, dict):
+            continue
+        ident = str(raw.get("Id") or "")
+        title = _clean(raw.get("Title") or "")
+        text = _clean(raw.get("Description") or "")
+        if not ident.isdigit() or not title or not text or text.startswith("$"):
+            continue
+        urls = raw.get("Urls") or []
+        path = next((u.get("Url", "") for u in urls if isinstance(u, dict)
+                     and u.get("Culture") == "en-us"), "")
+        if path != f"/en/jobs/{ident}/":
+            continue
+        locations = raw.get("Locations") or []
+        place = "; ".join(l.get("Address") or ", ".join(str(l.get(k) or "") for k in ("City", "Region", "Country"))
+                          for l in locations if isinstance(l, dict))
+        if not place:
+            continue
+        salary = raw.get("Salary") or {}
+        text += " " + _clean(salary.get("Description") or "")
+        out.append({"key": f"uber:{ident}", "company": company, "title": title,
+                    "location": place, "remote": raw.get("Remote") is True,
+                    "url": "https://jobs.uber.com" + path, "published": raw.get("DisplayDate") or "",
+                    "text": text, "employment": raw.get("ContractType") or "", "pay": pay_from_text(text)})
+    return out
+
+
+async def fetch_uber(company, get_public_json):
+    found, seen = [], set()
+    for query in UBER_QUERIES:
+        for page in range(1, UBER_PAGES + 1):
+            url = UBER_SEARCH + "?" + urlencode({"search": query, "pagesize": 100, "page": page})
+            status, payload = await get_public_json(url)
+            if status != 200 or not isinstance(payload, dict) or not isinstance(payload.get("jobs"), list):
+                return found, f"public search unavailable (HTTP {status}; robots may prohibit access)"
+            for job in uber_jobs(payload, company["name"]):
+                if job["key"] not in seen:
+                    found.append(job)
+                    seen.add(job["key"])
+            if page >= (payload.get("totalPages") or 1) or not payload["jobs"]:
+                break
+    return found, None
+
+
 def gem_jobs(posts, company: str) -> list:
     """Gem returns Greenhouse-shaped posts that already include the plain-text description."""
     out = []
@@ -1169,7 +1226,11 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
         provider, name = company["provider"], company.get("name", company.get("slug"))
         slug = company.get("slug", company.get("tenant", ""))
         async with gate:
-            if provider == "amazon":
+            if provider == "uber":
+                from public_jobs import PublicJobsClient
+                public = PublicJobsClient()
+                found, err = await fetch_uber(dict(company, name=name), public.json)
+            elif provider == "amazon":
                 found, err = await fetch_amazon(dict(company, name=name), get_json)
             elif provider == "workday":
                 found, err = await fetch_workday(dict(company, name=name), get_json, now)
