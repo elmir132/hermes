@@ -770,6 +770,135 @@ async def fetch_uber(company, get_public_json):
     return found, None
 
 
+# New public boards use guarded fetching; these settings do not change filters.
+ASHBY_HTML_DETAILS = 2
+
+
+def ashby_app_data(page):
+    """Read JSON assigned by the public board; never execute page JavaScript.
+
+    Other page fields include public telemetry/CAPTCHA identifiers. They are
+    neither search credentials nor needed by this reader, and are ignored.
+    """
+    match = re.search(r"window\.__appData\s*=\s*", page or "")
+    if not match:
+        return None
+    try:
+        value, _ = json.JSONDecoder().raw_decode(page[match.end():])
+        return value if isinstance(value, dict) else None
+    except (ValueError, TypeError):
+        return None
+
+
+def ashby_html_jobs(data, company):
+    """Normalize the small public job-board index embedded in Ashby HTML."""
+    if not isinstance(data, dict):
+        return []
+    org = data.get("organization") or {}
+    if org.get("hostedJobsPageSlug", "").casefold() != company["slug"].casefold():
+        return []
+    rows = (data.get("jobBoard") or {}).get("jobPostings") or []
+    found = []
+    for raw in rows if isinstance(rows, list) else []:
+        if not isinstance(raw, dict) or not re.fullmatch(r"[a-fA-F0-9]{8}(?:-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12}", str(raw.get("id") or "")):
+            continue
+        ident = raw["id"]
+        adapted = dict(raw, location=raw.get("locationName") or "",
+                       secondaryLocations=[{"location": item.get("locationName", "")} for item in raw.get("secondaryLocations") or [] if isinstance(item, dict)],
+                       jobUrl=f"https://jobs.ashbyhq.com/{company['slug']}/{ident}")
+        job = normalize("ashby", adapted, company["name"])
+        job["pay"] = pay_from_text(raw.get("compensationTierSummary") or "")
+        if job["title"] and job["location"]:
+            found.append(job)
+    return found
+
+
+def ashby_html_detail(job, page):
+    data = ashby_app_data(page)
+    posting = (data or {}).get("posting")
+    if not isinstance(posting, dict) or posting.get("id") != job["key"].rsplit(":", 1)[-1]:
+        return None
+    if posting.get("isListed") is not True or posting.get("isConfidential") is True:
+        return None
+    text = _clean(posting.get("descriptionHtml") or "")
+    if not text:
+        return None
+    locations = [posting.get("locationName") or "", *(posting.get("secondaryLocationNames") or [])]
+    published = ""
+    for block in re.findall(r'<script[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>', page, re.I | re.S):
+        # Some Ashby JSON-LD descriptions contain JS-style apostrophe escapes.
+        # Read only the scalar date from the matching JobPosting, without eval.
+        if 'JobPosting' not in block or not re.search(r'"value"\s*:\s*"' + re.escape(posting["id"]) + r'"', block):
+            continue
+        date = re.search(r'"datePosted"\s*:\s*"(\d{4}-\d{2}-\d{2}(?:T[^"<>]*)?)"', block)
+        if date:
+            published = date.group(1)
+            break
+    return dict(job, published=published, title=_clean(posting.get("title") or job["title"]), text=text,
+                location="; ".join(dict.fromkeys(x for x in locations if isinstance(x, str) and x)),
+                remote=posting.get("workplaceType") == "Remote", employment=posting.get("employmentType") or "",
+                pay=pay_from_text(posting.get("scrapeableCompensationSalarySummary") or posting.get("compensationTierSummary") or ""))
+
+
+async def fetch_ashby_html(company, cfg, public, seen_path=None):
+    status, page = await public.text(f"https://jobs.ashbyhq.com/{company['slug']}")
+    data = ashby_app_data(page) if status == 200 else None
+    if (data is None or not isinstance(data.get("jobBoard"), dict)
+            or str((data.get("organization") or {}).get("hostedJobsPageSlug", "")).casefold() != company["slug"].casefold()):
+        return [], f"public board unavailable (HTTP {status})"
+    candidates = [job for job in ashby_html_jobs(data, company) if score_job(dict(job, tier=company.get("tier", 0)), cfg)]
+    if seen_path is not None:
+        old = seen_keys(seen_path, [job["key"] for job in candidates])
+        candidates = [job for job in candidates if job["key"] not in old]
+    # Prioritize explicitly early-career postings before spending the detail cap.
+    # This only orders already accepted candidates; title/filter rules are unchanged.
+    candidates.sort(key=lambda job: (
+        -bool(re.search(r"new grad|early career|entry.level|junior", job["title"], re.I)),
+        -title_matches(job["title"], cfg)[1],
+        -score_job(dict(job, tier=company.get("tier", 0)), cfg)[0],
+        job["title"], job["key"]))
+    found = []
+    for job in candidates[:ASHBY_HTML_DETAILS]:
+        status, page = await public.text(job["url"])
+        if status != 200:
+            return found, f"posting unavailable (HTTP {status})"
+        detail = ashby_html_detail(job, page)
+        if detail is None:
+            return found, "posting JSON missing, unlisted or mismatched"
+        found.append(detail)
+    return found, None
+
+
+async def fetch_public_feed(company, public):
+    """Existing ATS normalization, guarded requests and complete descriptions.
+
+    Greenhouse's documented content=true includes descriptions in one bounded
+    response, avoiding an extra request per candidate. No keys are used.
+    """
+    provider, slug = company["provider"], company["slug"]
+    url = {"greenhouse": GREENHOUSE + "?content=true", "lever": LEVER}[provider].format(slug=slug)
+    status, payload = await public.json(url)
+    valid = isinstance(payload, dict) and isinstance(payload.get("jobs"), list) if provider == "greenhouse" else isinstance(payload, list)
+    if status != 200 or not valid:
+        return [], f"public feed unavailable (HTTP {status})"
+    found = jobs_from_feed(provider, payload, company["name"])
+    if provider == "greenhouse":
+        by_id = {str(r.get("id")): r for r in payload["jobs"] if isinstance(r, dict)}
+        for job in found:
+            # Greenhouse descriptions may be HTML-escaped once or twice.
+            raw = by_id.get(str(job.get("gh_id")), {})
+            job["text"] = _clean(html_lib.unescape(html_lib.unescape(raw.get("content") or "")))
+            job["pay"] = pay_from_text(job["text"])
+            if job["location"].strip().casefold() in ("", "united states", "united states of america", "multiple locations"):
+                offices = raw.get("offices") or []
+                places = [office.get("location") or office.get("name") for office in offices if isinstance(office, dict)]
+                if any(isinstance(place, str) and place.strip() for place in places):
+                    job["location"] = "; ".join(dict.fromkeys(place.strip() for place in places if isinstance(place, str) and place.strip()))
+        if any(not job["text"] for job in found):
+            return [], "public feed omitted posting descriptions"
+    return found, None
+
+
 def gem_jobs(posts, company: str) -> list:
     """Gem returns Greenhouse-shaped posts that already include the plain-text description."""
     out = []
@@ -1219,17 +1348,26 @@ def _source_status_summary(results, status_by_key):
 # ---------- the scan ----------
 async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None, get_html=None):
     """get_json(url) -> (status, JSON); get_html(url) -> (status, text). Returns text, count and errors."""
-    candidates, errors = [], []
+    candidates, errors, prefiltered_keys = [], [], []
+    companies = cfg.get("companies", [])
+    public = None
+    if any(c.get("public_feed") or c.get("provider") == "ashby_html" for c in companies):
+        from public_jobs import PublicJobsClient
+        public = PublicJobsClient(timeout=18)
     gate = asyncio.Semaphore(CONCURRENCY)                         # a few companies at a time; each is a different server
 
     async def read_company(company):
         provider, name = company["provider"], company.get("name", company.get("slug"))
         slug = company.get("slug", company.get("tenant", ""))
         async with gate:
-            if provider == "uber":
+            if provider == "ashby_html":
+                found, err = await fetch_ashby_html(dict(company, name=name), cfg, public, None if include_seen else db_path)
+            elif company.get("public_feed") and provider in ("greenhouse", "lever"):
+                found, err = await fetch_public_feed(dict(company, name=name), public)
+            elif provider == "uber":
                 from public_jobs import PublicJobsClient
-                public = PublicJobsClient()
-                found, err = await fetch_uber(dict(company, name=name), public.json)
+                uber_public = PublicJobsClient()
+                found, err = await fetch_uber(dict(company, name=name), uber_public.json)
             elif provider == "amazon":
                 found, err = await fetch_amazon(dict(company, name=name), get_json)
             elif provider == "workday":
@@ -1299,11 +1437,17 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             if scored:
                 job["score"], job["reasons"] = scored
                 candidates.append((provider, slug, job))
+            elif provider == "ashby_html" and cfg.get("max_age_days"):
+                age = age_days(job, now)
+                if age is not None and age > cfg["max_age_days"]:
+                    # Date is learned on the detail page. Remember stale capped
+                    # results on marked scans so later runs can reach other jobs.
+                    prefiltered_keys.append(job["key"])
     keys = [j["key"] for _, _, j in candidates]
     old = set() if include_seen else seen_keys(db_path, keys)
     fresh = [(p, s, j) for p, s, j in candidates if j["key"] not in old]
     fresh.sort(key=lambda x: (-x[2]["score"], x[2]["company"], x[2]["title"]))
-    shown, skipped_keys, fetched, per_company = [], [], 0, {}
+    shown, skipped_keys, fetched, per_company = [], list(prefiltered_keys), 0, {}
     hidden_ineligible = 0
     cap = cfg.get("max_per_company") or 10**6
     wanted = limit or cfg.get("max_per_message", 12)
@@ -1379,7 +1523,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                    f"U.S. person status or a security clearance is required." if hidden_ineligible else "")
     if not shown:
         return "No new matching roles today.\n\n" + source_summary + hidden_note + _errs(errors), 0, errors
-    remaining = len(fresh) - len(shown) - len(skipped_keys)      # roughly; capped companies keep their extras for later
+    remaining = len(fresh) - len(shown) - len(skipped_keys) + len(prefiltered_keys)      # roughly; capped companies keep their extras for later
     if collect is not None:                                      # lets the bot answer "/fit 3" and "/applied 3" later
         collect[:] = [{"company": j["company"], "title": j["title"], "location": j["location"], "url": j["url"],
                        "text": j["text"][:5000], "pay": j["pay"], "tier": j.get("tier", 0)} for _, _, j in shown]

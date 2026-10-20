@@ -52,7 +52,9 @@ class PublicJobsClient:
     Unavailable robots (except 404/410) fail closed; no browser or API fallback.
     raw(url) is injectable for tests and returns (status, headers, text).
     """
-    def __init__(self, raw=None, pause=1.0):
+    def __init__(self, raw=None, pause=1.0, timeout=25):
+        self.timeout = timeout
+        self.locks = {}
         self.raw = raw or self._raw
         self.pause = pause
         self.policies = {}
@@ -72,7 +74,7 @@ class PublicJobsClient:
             opener = request.build_opener(NoRedirect)
             req = request.Request(url, headers={"User-Agent": USER_AGENT})
             try:
-                with opener.open(req, timeout=25) as response:
+                with opener.open(req, timeout=self.timeout) as response:
                     return response.status, dict(response.headers), response.read(12_000_000).decode("utf-8", "replace")
             except error.HTTPError as exc:
                 return exc.code, dict(exc.headers), exc.read(100_000).decode("utf-8", "replace")
@@ -80,21 +82,25 @@ class PublicJobsClient:
 
     async def _request(self, url, delay):
         origin = self._origin(url)
-        if url in self.cache:
-            return self.cache[url]
-        if origin in self.stopped:
-            return 0, {}, ''
-        await asyncio.sleep(max(0, delay - (time.monotonic() - self.last.get(origin, 0))))
-        try:
-            result = await self.raw(url)
-        except Exception:
-            result = (0, {}, '')
-        self.last[origin] = time.monotonic()
-        self.cache[url] = result
-        self.requests.append({'url': url, 'status': result[0]})
-        if result[0] in (403, 429):
-            self.stopped.add(origin)
-        return result
+        # Several boards share one ATS host. Serialize requests there so
+        # concurrent companies still respect the host's pause and stop state.
+        lock = self.locks.setdefault(origin, asyncio.Lock())
+        async with lock:
+            if url in self.cache:
+                return self.cache[url]
+            if origin in self.stopped:
+                return 0, {}, ''
+            await asyncio.sleep(max(0, delay - (time.monotonic() - self.last.get(origin, 0))))
+            try:
+                result = await self.raw(url)
+            except Exception:
+                result = (0, {}, '')
+            self.last[origin] = time.monotonic()
+            self.cache[url] = result
+            self.requests.append({'url': url, 'status': result[0]})
+            if result[0] in (403, 429):
+                self.stopped.add(origin)
+            return result
 
     @staticmethod
     def _origin(url):
