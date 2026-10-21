@@ -115,7 +115,7 @@ def normalize(provider: str, raw: dict, company: str) -> dict:
                 "location": "; ".join(x for x in locs if x), "remote": (raw.get("workplaceType") or "").lower() == "remote",
                 "url": raw.get("hostedUrl", ""), "published": published,
                 "text": raw.get("descriptionPlain", "") + " " + raw.get("additionalPlain", ""),
-                "employment": cats.get("commitment", ""), "pay": _lever_pay(raw.get("salaryRange"))}
+                "employment": cats.get("commitment", ""), "pay": _lever_pay(raw.get("salaryRange")), "pay_basis": "base" if str((raw.get("salaryRange") or {}).get("currency", "USD") or "").upper() == "USD" else ""}
     if provider == "ashby":
         locs = [raw.get("location", "")] + [s.get("location", "") if isinstance(s, dict) else str(s) for s in raw.get("secondaryLocations") or []]
         return {"key": f"ab:{company}:{raw.get('id')}", "company": company, "title": (raw.get("title") or "").strip(),
@@ -123,7 +123,7 @@ def normalize(provider: str, raw: dict, company: str) -> dict:
                 "url": _first(raw.get("jobUrl"), raw.get("applyUrl")), "published": raw.get("publishedAt") or "",
                 "text": raw.get("descriptionPlain", ""), "listed": raw.get("isListed", True),
                 "employment": raw.get("employmentType", ""),
-                "pay": pay_from_text((raw.get("compensation") or {}).get("scrapeableCompensationSalarySummary", ""))}
+                "pay": pay_from_text((raw.get("compensation") or {}).get("scrapeableCompensationSalarySummary", "")), "pay_basis": "base" if not re.search(r"\b(?:CAD|AUD|SGD|HKD|NZD)\b|C\$|A\$", ((raw.get("compensation") or {}).get("scrapeableCompensationSalarySummary") or ""), re.I) else ""}
     raise ValueError(f"unknown provider {provider}")
 
 
@@ -1660,6 +1660,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 for r in detail.get("pay_input_ranges") or []:
                     if r.get("currency_type") == "USD" and r.get("min_cents") and r.get("max_cents"):
                         job["pay"] = (int(r["min_cents"]) // 100, int(r["max_cents"]) // 100)
+                        job["pay_basis"] = "base"
                         break
         if provider == "rippling" and not job["text"] and job.get("rippling_id"):
             if any(c.get("guarded") and c.get("name") == job["company"] for c in companies):
@@ -1691,8 +1692,18 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 job["text"], job["details_checked"] = body, True
                 if "new york" in body.lower() or any(city in body.lower() for city in BAY_AREA):
                     job["location_verified"] = True
-        job["pay"] = job.get("pay") or pay_from_text(job["text"])
-        if not pay_ok(job["pay"], cfg):
+        # Preserve legacy base-only configs; total-comp configs require actual
+        # stated totals or annual component evidence, never guessed stock values.
+        compensation = None
+        if cfg.get("min_total_comp"):
+            import job_compensation
+            compensation = job_compensation.analyze(job["text"], job.get("pay"),
+                job.get("pay_basis") == "base", cfg["min_total_comp"])
+            job["compensation"] = compensation
+        job["pay"] = compensation["base"] if compensation else (job.get("pay") or pay_from_text(job["text"]))
+        # Both targets apply: a stated base under min_pay is dropped even if the package might reach
+        # min_total_comp, and a stated total under min_total_comp is dropped. Unknown pay passes.
+        if (compensation and compensation['status'] == 'below') or not pay_ok(job["pay"], cfg):
             skipped_keys.append(job["key"])                      # known pay below your minimum
             continue
         if senior_pay(job, cfg):
@@ -1717,6 +1728,8 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             extras = extra_pay(job["text"])
             job["flags"] = ([pay_label(job["pay"]) + (" + " + ", ".join(extras) + " mentioned" if extras else "")] + visa_notes + eligibility
                              + ([f"asks for {years}+ years"] if years and years >= 3 else []))
+        if compensation:
+            job['flags'].extend(job_compensation.notes(compensation))
         shown.append((provider, slug, job))
         per_company[job["company"]] = per_company.get(job["company"], 0) + 1
     if ack_keys is not None:

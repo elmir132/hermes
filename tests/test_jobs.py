@@ -49,6 +49,8 @@ class FakeFeeds:
 def cfg_with(companies, **over):
     c = dict(CFG)
     c["companies"] = companies
+    if "min_pay" in over and "min_total_comp" not in over:
+        c["min_total_comp"] = None  # Explicit legacy base-pay tests.
     c.update(over)
     return c
 

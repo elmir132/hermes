@@ -156,5 +156,20 @@ class SeniorPayTests(unittest.TestCase):
         self.assertIn("Hidden: 1 posting whose starting base is $300k or more", text)
 
 
+class BothPayTargetsTests(unittest.TestCase):
+    def test_a_low_stated_base_is_dropped_even_with_a_bonus_and_a_good_one_passes(self):
+        from test_jobs import FakeFeeds, gh_job, cfg_with, NOW
+        db = os.path.join(tempfile.mkdtemp(), "h.db")
+        detail = lambda n: f"https://boards-api.greenhouse.io/v1/boards/acme/jobs/{n}?pay_transparency=true"
+        feeds = FakeFeeds({"boards-api": {"jobs": [gh_job(1, "Software Engineer, New Grad"), gh_job(2, "Backend Engineer, New Grad")]}},
+                          details={detail(1): {"content": "The base salary range is $110,000 - $120,000 per year, plus an annual bonus."},
+                                   detail(2): {"content": "The base salary range is $150,000 - $170,000 per year."}})
+        cfg = cfg_with([{"name": "Acme", "provider": "greenhouse", "slug": "acme"}], min_pay=135000, min_total_comp=170000)
+        text, n, _ = asyncio.run(jobs.scan(cfg, feeds, db, now=NOW, mark=False))
+        self.assertNotIn("Software Engineer, New Grad", text)
+        self.assertIn("Backend Engineer, New Grad", text)
+        self.assertEqual(n, 1)
+
+
 if __name__ == "__main__":
     unittest.main()
