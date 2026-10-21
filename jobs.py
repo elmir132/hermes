@@ -1399,8 +1399,11 @@ def seen_keys(path, keys):
 
 def mark_seen(path, keys, now=None):
     now = now or datetime.now(timezone.utc)
+    keys = list(keys)
     with closing(_db(path)) as con, con:
         con.executemany("INSERT OR IGNORE INTO jobs_seen VALUES (?, ?)", [(k, now.isoformat()) for k in keys])
+        from job_store import acknowledge
+        acknowledge(con, keys)
         con.execute("DELETE FROM jobs_seen WHERE seen_at < ?", ((now - timedelta(days=120)).isoformat(),))
 
 
@@ -1424,13 +1427,16 @@ def _record_source_status(path, results, now=None):
             last_attempt_at TEXT NOT NULL,
             last_success_at TEXT,
             last_error TEXT,
-            last_result_count INTEGER NOT NULL DEFAULT 0
+            last_result_count INTEGER NOT NULL DEFAULT 0,
+            last_outcome TEXT NOT NULL DEFAULT 'healthy'
         )""")
+        if 'last_outcome' not in {r[1] for r in con.execute('PRAGMA table_info(jobs_source_status)')}:
+            con.execute("ALTER TABLE jobs_source_status ADD COLUMN last_outcome TEXT NOT NULL DEFAULT 'healthy'")
         for company, provider, _slug, name, found, err in results:
             key = _source_key(company)
             con.execute("""INSERT INTO jobs_source_status
-                (source_key, company, provider, last_attempt_at, last_success_at, last_error, last_result_count)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (source_key, company, provider, last_attempt_at, last_success_at, last_error, last_result_count, last_outcome)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(source_key) DO UPDATE SET
                     company=excluded.company,
                     provider=excluded.provider,
@@ -1438,10 +1444,11 @@ def _record_source_status(path, results, now=None):
                     last_success_at=CASE WHEN excluded.last_error IS NULL
                         THEN excluded.last_attempt_at ELSE jobs_source_status.last_success_at END,
                     last_error=excluded.last_error,
+                    last_outcome=excluded.last_outcome,
                     last_result_count=CASE WHEN excluded.last_error IS NULL
                         THEN excluded.last_result_count ELSE jobs_source_status.last_result_count END""",
                 (key, name, provider, stamp, stamp if not err else None,
-                 str(err)[:500] if err else None, len(found or [])))
+                 str(err)[:500] if err else None, len(found or []), "partial" if err and found else ("failed" if err else "healthy")))
         rows = con.execute("SELECT source_key, company, last_attempt_at, last_success_at, last_error, last_result_count FROM jobs_source_status").fetchall()
     return {row[0]: {"company": row[1], "last_attempt_at": row[2], "last_success_at": row[3],
                      "last_error": row[4], "last_result_count": row[5]} for row in rows}
@@ -1465,14 +1472,15 @@ def _source_status_summary(results, status_by_key):
     stamp = status_by_key.get(_source_key(results[0][0]), {}).get("last_attempt_at") if results else None
     lines = [f"Sources: {succeeded}/{total} succeeded at {_format_scan_stamp(stamp)}." if total else "Sources: none configured."]
     for result, status in failed[:5]:
-        lines.append(f"• {result[3]} failed; last good {_format_scan_stamp(status.get('last_success_at'))} ({str(result[5])[:90]})")
+        outcome = "partial" if result[4] else "failed"
+        lines.append(f"• {result[3]} {outcome}; last good {_format_scan_stamp(status.get('last_success_at'))} ({str(result[5])[:90]})")
     if len(failed) > 5:
         lines.append(f"• {len(failed) - 5} more source failures; see logs")
     return "\n".join(lines)
 
 
 # ---------- the scan ----------
-async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None, get_html=None, alert_jobs=None, alert_only=False, ack_keys=None, exclude_keys=None, candidate_keys=None, number_from=1):
+async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None, get_html=None, alert_jobs=None, alert_only=False, ack_keys=None, exclude_keys=None, candidate_keys=None, number_from=1, persist=False):
     """get_json(url) -> (status, JSON); get_html(url) -> (status, text). Returns text, count and errors."""
     candidates, errors, prefiltered_keys = [], [], []
     if ack_keys is not None:
@@ -1562,6 +1570,16 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 url = {"greenhouse": GREENHOUSE, "lever": LEVER, "ashby": ASHBY}[provider].format(slug=quote(slug, safe=""))
                 status, payload = await get_json(url)
                 found, err = (jobs_from_feed(provider, payload, name), None) if status == 200 else ([], f"HTTP {status}")
+        if persist and found:
+            import job_store
+            staged = []
+            for raw in found:
+                raw['tier'], raw['ratings'] = company.get('tier', 0), company.get('ratings')
+                scored = score_job(raw, cfg, now)
+                if scored:
+                    raw['score'], raw['reasons'] = scored
+                    staged.append((raw, _source_key(company), False, False))
+            job_store.upsert(db_path, staged, now)
         return company, provider, slug, name, found, err
 
     gathered = await asyncio.gather(*(read_company(c) for c in companies), return_exceptions=True)
@@ -1595,8 +1613,6 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 record["company"] = company["name"]
             source = dict(company, provider="email_alert", slug=name)
             results.append((source, "email_alert", name, name, records, None))
-    source_status = _record_source_status(db_path, results, now)
-    source_summary = _source_status_summary(results, source_status)
     for company, provider, slug, name, found, err in results:
         if err:
             errors.append(f"{name}: {err}")
@@ -1619,8 +1635,15 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                     # Date is learned on the detail page. Remember stale capped
                     # results on marked scans so later runs can reach other jobs.
                     prefiltered_keys.append(job["key"])
+    if persist:
+        import job_store
+        # Persist discovery BEFORE any output/detail cap, send, or cancellation.
+        job_store.upsert(db_path, [(j, f"{p}:{slug}", False, False) for p, slug, j in candidates], now)
     keys = [j["key"] for _, _, j in candidates]
     old = set() if include_seen else seen_keys(db_path, keys)
+    stored = job_store.states(db_path) if persist else {}
+    if persist and not include_seen:
+        old.update(k for k, (_, state) in stored.items() if state in ("sent", "dismissed", "rejected", "closed"))
     from job_alerts import url_key
     url_aliases = {j["key"]: url_key(j["url"]) for _, _, j in candidates}
     old_urls = set() if include_seen else seen_keys(db_path, list(filter(None, url_aliases.values())))
@@ -1640,13 +1663,19 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     shown, skipped_keys, fetched, per_company = [], list(prefiltered_keys), 0, {}
     hidden_ineligible = 0
     hidden_senior_pay = 0
+    finalized = []
+    detail_failures = {}
     cap = cfg.get("max_per_company") or 10**6
     wanted = limit or cfg.get("max_per_message", 12)
     max_years = cfg.get("max_years")
     for provider, slug, job in fresh:
-        if len(shown) >= wanted:
+        if persist and provider in ('greenhouse', 'workday', 'rippling', 'google') and stored.get(job['key'], (0, 'new'))[0] and not job.get('text'):
+            # Already checked shallow feeds retain their cached evidence. Spend
+            # the bounded detail budget on discoveries not yet prepared.
+            continue
+        if not persist and len(shown) >= wanted:
             break
-        if per_company.get(job["company"], 0) >= cap:           # keep one big company from filling the list
+        if not persist and per_company.get(job["company"], 0) >= cap:           # keep one big company from filling the list
             continue
         if provider == "greenhouse" and not job["text"]:        # the list has no description: read it only when needed
             if fetched >= DETAIL_LIMIT * 2:
@@ -1655,6 +1684,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             status, detail = await get_json(f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs/{job['gh_id']}?pay_transparency=true")
             if status != 200 or not isinstance(detail, dict):
                 job["details_checked"] = False                   # say so, rather than show it as checked
+                detail_failures.setdefault(job["company"], set()).add(f"description HTTP {status}")
             if status == 200 and isinstance(detail, dict):
                 job["text"] = re.sub(r"<[^>]+>", " ", detail.get("content", "")).replace("&nbsp;", " ")
                 for r in detail.get("pay_input_ranges") or []:
@@ -1669,6 +1699,9 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 continue
             fetched += 1
             status, detail = await get_json(f"{RIPPLING.format(slug=slug)}/{job['rippling_id']}")
+            if status != 200:
+                job["details_checked"] = False
+                detail_failures.setdefault(job["company"], set()).add(f"description HTTP {status}")
             if status == 200 and not rippling_detail(job, detail):
                 skipped_keys.append(job["key"])                  # internship, contract or part-time
                 continue
@@ -1680,6 +1713,9 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             fetched += 1
             status, detail = await get_json(f"https://{slug_host(cfg, job['company'])}/wday/cxs/{slug_path(cfg, job['company'])}{job['wd_path']}")
             info = (detail or {}).get("jobPostingInfo", {}) if status == 200 and isinstance(detail, dict) else {}
+            if status != 200:
+                job["details_checked"] = False
+                detail_failures.setdefault(job["company"], set()).add(f"description HTTP {status}")
             job["text"] = _html_text(info.get("jobDescription", ""))
             if "part" in (info.get("timeType") or "").lower() or "intern" in (info.get("timeType") or "").lower():
                 skipped_keys.append(job["key"])
@@ -1688,6 +1724,8 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             fetched += 1                                          # Google's posting pages carry the qualifications and locations as text
             status, page = await get_html(job["url"])
             body = page_text(page) if status == 200 and isinstance(page, str) else ""
+            if status != 200:
+                detail_failures.setdefault(job["company"], set()).add(f"description HTTP {status}")
             if len(body) > 500:
                 job["text"], job["details_checked"] = body, True
                 if "new york" in body.lower() or any(city in body.lower() for city in BAY_AREA):
@@ -1700,7 +1738,13 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             compensation = job_compensation.analyze(job["text"], job.get("pay"),
                 job.get("pay_basis") == "base", cfg["min_total_comp"])
             job["compensation"] = compensation
-        job["pay"] = compensation["base"] if compensation else (job.get("pay") or pay_from_text(job["text"]))
+        stated = job.get("pay") or pay_from_text(job["text"])
+        if compensation:
+            # A plainly stated salary still counts as base for the base minimum, unless the posting
+            # labels its figure as total compensation.
+            job["pay"] = compensation["base"] or (None if compensation["total"] else stated)
+        else:
+            job["pay"] = stated
         # Both targets apply: a stated base under min_pay is dropped even if the package might reach
         # min_total_comp, and a stated total under min_total_comp is dropped. Unknown pay passes.
         if (compensation and compensation['status'] == 'below') or not pay_ok(job["pay"], cfg):
@@ -1730,8 +1774,24 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                              + ([f"asks for {years}+ years"] if years and years >= 3 else []))
         if compensation:
             job['flags'].extend(job_compensation.notes(compensation))
+        if persist:
+            finalized.append((job, f"{provider}:{slug}", True, False))
         shown.append((provider, slug, job))
         per_company[job["company"]] = per_company.get(job["company"], 0) + 1
+    if persist:
+        rejected = set(skipped_keys)
+        finalized.extend((j, f"{p}:{slug}", True, True) for p, slug, j in candidates if j['key'] in rejected)
+        job_store.upsert(db_path, finalized, now)
+        # Rejections need no Telegram acknowledgement; avoid spending future detail caps on them.
+        mark_seen(db_path, skipped_keys, now)
+        # Legacy return shape stays bounded; the persistent queue owns overflow.
+        bounded, per_output = [], {}
+        for item in shown:
+            name = item[2]['company']
+            if per_output.get(name, 0) < cap and len(bounded) < wanted:
+                bounded.append(item)
+                per_output[name] = per_output.get(name, 0) + 1
+        shown = bounded
     if ack_keys is not None:
         # Deferred acknowledgement lets callers wait for successful delivery.
         # Include URL aliases so rejected email records leave the pending queue.
@@ -1739,6 +1799,14 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
         ack_keys.extend(k for key in skipped_keys for k in (key, aliases.get(key)) if k)
     if mark:
         mark_seen(db_path, skipped_keys)
+    if detail_failures:
+        for index, result in enumerate(results):
+            if result[3] in detail_failures:
+                detail_error = '; '.join(sorted(detail_failures[result[3]]))
+                results[index] = (*result[:5], '; '.join(filter(None, [result[5], detail_error])))
+                errors.append(f"{result[3]}: {detail_error}")
+    source_status = _record_source_status(db_path, results, now)
+    source_summary = _source_status_summary(results, source_status)
     hidden_note = (f"\nHidden: {hidden_ineligible} posting{'s' if hidden_ineligible != 1 else ''} that say U.S. citizenship, "
                    f"U.S. person status or a security clearance is required." if hidden_ineligible else "")
     if hidden_senior_pay:
@@ -1747,9 +1815,14 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     if not shown:
         return "No new matching roles today.\n\n" + source_summary + hidden_note + _errs(errors), 0, errors
     remaining = len(fresh) - len(shown) - len(skipped_keys) + len(prefiltered_keys)      # roughly; capped companies keep their extras for later
+    if persist:
+        for _, _, job in shown:
+            identity = job_store.identity(db_path, job['key'])
+            job['store_key'], job['job_id'] = identity['key'], identity['public_id']
     if collect is not None:                                      # lets the bot answer "/fit 3" and "/applied 3" later
         collect[:] = [{"company": j["company"], "title": j["title"], "location": j["location"], "url": j["url"],
-                       "text": j["text"][:5000], "pay": j["pay"], "tier": j.get("tier", 0)} for _, _, j in shown]
+                       "text": j["text"][:5000], "pay": j["pay"], "tier": j.get("tier", 0),
+                       **({"key": j["key"], "store_key": j["store_key"], "job_id": j["job_id"]} if persist else {})} for _, _, j in shown]
     lines = [f"{len(shown)} new role{'s' if len(shown) != 1 else ''} (about {max(remaining, 0)} more waiting):",
              source_summary + hidden_note]
     for n, (_, _, j) in enumerate(shown, number_from):
@@ -1758,7 +1831,8 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             where += " (search filter; listing location unverified)"
         tier = f"  [tier {j['tier']}{rating_label(j.get('ratings'))}]" if j.get("tier") else ""
         posted = f" · posted {j['age']}d ago" if j.get("age") is not None else ""
-        lines.append(f"\n• {j['company']}{tier}: {j['title']}  #{n}\n  {where}{' (remote ok)' if j['remote'] else ''}{posted}\n  {'; '.join(j['flags'])}\n  {j['url']}")
+        stable_id = f" [{j['job_id']}]" if persist else ""
+        lines.append(f"\n• {j['company']}{tier}: {j['title']}  #{n}{stable_id}\n  {where}{' (remote ok)' if j['remote'] else ''}{posted}\n  {'; '.join(j['flags'])}\n  {j['url']}")
     lines.append("\nVisa and experience notes are only hints from the posting text. Read the posting before relying on them.")
     text = "\n".join(lines)[:OUTPUT_CHARS] + _errs(errors)
     delivered = [key for _, _, j in shown for key in (j["key"], url_key(j["url"])) if key]

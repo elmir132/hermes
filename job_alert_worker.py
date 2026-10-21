@@ -85,7 +85,7 @@ async def run_once(cfg, accounts, get_json, path, send, senders=None, now=None, 
                 text, count, scan_errors = await jobs.scan(
                     cfg, no_jobs_network, path, mark=False, limit=batch_size,
                     now=stamp, collect=shown, alert_jobs=records, alert_only=True,
-                    ack_keys=acknowledgement)
+                    ack_keys=acknowledgement, persist=True)
                 if (all(row['url'] in text for row in shown) and
                         len(('📬 Job alerts\n\n' + text).encode('utf-16-le')) // 2 <= 3800):
                     break

@@ -207,7 +207,7 @@ def main_functions(names, values):
     tree = ast.parse((Path(__file__).parent.parent / 'main.py').read_text())
     nodes = [n for n in tree.body if isinstance(n, (ast.FunctionDef,ast.AsyncFunctionDef)) and n.name in names]
     for n in nodes:n.decorator_list = []
-    env = {'asyncio':asyncio, 'Message':object, **values}
+    env = {'asyncio':asyncio, 'Message':object, 'remember_job_message':lambda *args:None, 'LAST_JOBS':[], **values}
     exec(compile(ast.fix_missing_locations(ast.Module(body=nodes,type_ignores=[])), 'main functions', 'exec'), env)
     return env
 
@@ -319,7 +319,7 @@ class AdditionalPolicyTests(unittest.IsolatedAsyncioTestCase):
                 if fail:raise TimeoutError
             env = main_functions({'_jobs_loop'}, dict(
                 asyncio=SimpleNamespace(sleep=sleep), JOBS_RUN_LOCK=asyncio.Lock(),
-                run_jobs=run, bot=SimpleNamespace(send_message=send), ALLOWED_USER=1,
+                run_jobs=run, refresh_jobs=AsyncMock(), bot=SimpleNamespace(send_message=send), ALLOWED_USER=1,
                 jobs=SimpleNamespace(mark_seen=lambda *args:events.append('ack')), DB_PATH='db',
                 digest=SimpleNamespace(seconds_until=lambda hour:10), DIGEST_HOUR=8))
             with self.assertRaises(asyncio.CancelledError):await env['_jobs_loop']()

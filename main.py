@@ -1573,20 +1573,39 @@ JOBS_RUN_LOCK = asyncio.Lock()  # Serialize email/native delivery and shared see
 LAST_JOBS: list = []          # what /jobs showed last, so "/fit 3" and "/applied 3" know which role you mean
 LAST_FIT: dict = {}           # job url -> resume name suggested by /fit
 
-async def run_jobs(mark: bool = True, include_seen: bool = False, ack_keys=None) -> str:
+JOBS_SCAN_LOCK = asyncio.Lock()  # Network scans never hold the delivery/browsing lock.
+
+
+async def refresh_jobs(cfg=None, now=None, candidate_keys=None, exclude_keys=None, include_alerts=True):
+    """Fill durable storage using existing bounded readers. Never marks a delivery."""
+    cfg = cfg if cfg is not None else await asyncio.to_thread(jobs.load_config)
+    async with JOBS_SCAN_LOCK:
+        alert_jobs, alert_errors = [], []
+        if include_alerts and os.environ.get("HERMES_JOB_ALERT_RECORDS") == "1" and digest.parse_job_alert_senders():
+            import job_alerts
+            accounts = await asyncio.to_thread(_job_alert_accounts)
+            alert_jobs, alert_errors = await job_alerts.fetch_records(accounts, _digest_get, DB_PATH)
+        _, _, errors = await jobs.scan(cfg, _jobs_get, DB_PATH, mark=False, now=now,
+            get_html=_jobs_get_html, alert_jobs=alert_jobs, candidate_keys=candidate_keys,
+            exclude_keys=exclude_keys, persist=True)
+        return errors + alert_errors
+
+
+async def run_jobs(mark=False, include_seen=False, ack_keys=None, companies=None, exclude_keys=None, now=None):
+    """Instant local browsing. Caller holds the delivery lock, and acknowledges after send."""
+    import job_store
     cfg = await asyncio.to_thread(jobs.load_config)
-    alert_jobs, alert_errors = [], []
-    if os.environ.get("HERMES_JOB_ALERT_RECORDS") == "1" and digest.parse_job_alert_senders():
-        import job_alerts
-        accounts = await asyncio.to_thread(_job_alert_accounts)
-        alert_jobs, alert_errors = await job_alerts.fetch_records(accounts, _digest_get, DB_PATH)
-    shown: list = []
-    text, _, _ = await jobs.scan(cfg, _jobs_get, DB_PATH, mark=mark, include_seen=include_seen,
-                                 collect=shown, get_html=_jobs_get_html, alert_jobs=alert_jobs, ack_keys=ack_keys)
-    if shown:
-        LAST_JOBS[:] = shown
-    if alert_errors:
-        text += "\nJob alerts: " + "; ".join(alert_errors[:3])
+    text, shown, acknowledgement = await asyncio.to_thread(job_store.batch, DB_PATH, cfg,
+        include_seen=include_seen, companies=companies, exclude_keys=exclude_keys, now=now,
+        number_from=1)
+    LAST_JOBS[:] = shown
+    import source_health
+    health, _ = await asyncio.to_thread(source_health.coverage, cfg, DB_PATH, now)
+    text = source_health.summary(health) + "\n\n" + text
+    if ack_keys is not None:
+        ack_keys[:] = acknowledgement
+    if mark and not include_seen:
+        jobs.mark_seen(DB_PATH, acknowledgement)
     return text
 
 FAST_LANE = os.environ.get("JOBS_FAST_LANE", "on").lower() != "off"       # hourly check of the top companies
@@ -1594,32 +1613,29 @@ FAST_LANE_MINUTES = max(30, int(os.environ.get("JOBS_FAST_LANE_MINUTES", "60") o
 
 
 async def run_fast_lane(now=None):
-    """Read only the top companies on light readers and send roles that appeared since the last check.
-    Same filters and seen-store as the daily list, so nothing is sent twice. Returns the number sent."""
+    """Refresh light top-company readers, then deliver persisted overflow too."""
     cfg = await asyncio.to_thread(jobs.load_config)
     if jobs.fast_lane_quiet(now, (cfg.get("fast_lane") or {}).get("quiet")):
-        return 0                                          # overnight: these roles are picked up at 7 AM
+        return 0
     lane = dict(cfg, companies=jobs.fast_lane_companies(cfg))
+    met = []
     known = await asyncio.to_thread(jobs.fast_lane_known, DB_PATH)
+    await refresh_jobs(lane, now, met, known, include_alerts=False)
+    if known is None:
+        await asyncio.to_thread(jobs.fast_lane_remember, DB_PATH, met)
+        return 0  # Initial backlog remains available in /jobs and the daily list.
     async with JOBS_RUN_LOCK:
-        acknowledgement, shown, met = [], [], []
-        # Numbers continue after the list already on screen, so "/fit 3" keeps meaning the role it meant.
-        text, count, _ = await jobs.scan(lane, _jobs_get, DB_PATH, mark=False, now=now, collect=shown,
-                                         get_html=_jobs_get_html, ack_keys=acknowledgement,
-                                         exclude_keys=known, candidate_keys=met,
-                                         number_from=len(LAST_JOBS) + 1)
-        remember = jobs.fast_lane_to_remember(known, met, acknowledgement)
-        if known is None:                                 # first run: learn today's backlog, send nothing
-            count = 0                                     # (the backlog stays in the daily list)
-        else:
-            if count:
-                roles = text.split("\n\n• ", 1)[-1].rsplit("\nVisa and experience notes", 1)[0]
-                await bot.send_message(ALLOWED_USER, f"⚡ New at top companies ({count})\n\n• " + roles,
-                                       parse_mode=None, disable_web_page_preview=True)
-                LAST_JOBS.extend(shown)
-                jobs.mark_seen(DB_PATH, acknowledgement)
-        await asyncio.to_thread(jobs.fast_lane_remember, DB_PATH, remember)
-    return count
+        acknowledgement = []
+        text = await run_jobs(ack_keys=acknowledgement, now=now,
+            companies=[c['name'] for c in lane['companies']], exclude_keys=known)
+        if acknowledgement:
+            sent = await bot.send_message(ALLOWED_USER, "⚡ New at top companies\n\n" + text,
+                                   parse_mode=None, disable_web_page_preview=True)
+            remember_job_message(sent, LAST_JOBS)
+            jobs.mark_seen(DB_PATH, acknowledgement)
+            await asyncio.to_thread(jobs.fast_lane_remember, DB_PATH,
+                jobs.fast_lane_to_remember(known, met, acknowledgement))
+        return len(LAST_JOBS) if acknowledgement else 0
 
 
 async def _jobs_fast_loop():
@@ -1637,27 +1653,42 @@ async def _jobs_loop():
     while True:
         await asyncio.sleep(digest.seconds_until(DIGEST_HOUR) + 600)
         try:
+            await refresh_jobs()
             async with JOBS_RUN_LOCK:
                 acknowledgement = []
                 text = await run_jobs(mark=False, ack_keys=acknowledgement)
-                await bot.send_message(ALLOWED_USER, "💼 Job watch\n\n" + text,
+                sent = await bot.send_message(ALLOWED_USER, "💼 Job watch\n\n" + text,
                                        parse_mode=None, disable_web_page_preview=True)
+                remember_job_message(sent, LAST_JOBS)
                 jobs.mark_seen(DB_PATH, acknowledgement)
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"[jobs daily] failed: {type(exc).__name__}: {exc}", flush=True)
         await asyncio.sleep(60)
 
 @dp.message(Command("jobs"))
 async def cmd_jobs(msg: Message):
     if not allowed(msg): return
-    await msg.answer("Checking the job boards, this takes about a minute...")
+    if "refresh" in msg.text.lower().split():
+        await msg.answer("Refreshing boards; stored roles remain available through /jobs meanwhile.")
+        await refresh_jobs()
     show_all = "all" in msg.text.lower().split()
     async with JOBS_RUN_LOCK:
         acknowledgement = []
         text = await run_jobs(mark=False, include_seen=show_all, ack_keys=acknowledgement)
-        await msg.answer(text, parse_mode=None, disable_web_page_preview=True)
+        sent = await msg.answer(text, parse_mode=None, disable_web_page_preview=True)
+        remember_job_message(sent, LAST_JOBS)
         if not show_all:
             jobs.mark_seen(DB_PATH, acknowledgement)
+
+
+@dp.message(Command("sources"))
+async def cmd_sources(msg: Message):
+    if not allowed(msg): return
+    import source_health
+    cfg = await asyncio.to_thread(jobs.load_config)
+    pages = await asyncio.to_thread(source_health.pages, cfg, DB_PATH)
+    for page in pages:
+        await msg.answer(page, parse_mode=None, disable_web_page_preview=True)
 
 
 def _job_alert_accounts():
@@ -1674,10 +1705,13 @@ def _job_alert_accounts():
 
 
 async def _poll_job_alerts():
+    sent = None
     def remember(shown):
         LAST_JOBS[:] = shown
+        remember_job_message(sent, shown)
     async def publish(text):
-        await bot.send_message(ALLOWED_USER, text, parse_mode=None, disable_web_page_preview=True)
+        nonlocal sent
+        sent = await bot.send_message(ALLOWED_USER, text, parse_mode=None, disable_web_page_preview=True)
     async with JOBS_RUN_LOCK:
         # No mailbox access without exact configured senders.
         accounts = await asyncio.to_thread(_job_alert_accounts) if digest.parse_job_alert_senders() else []
@@ -1732,35 +1766,44 @@ async def cmd_jobalerts(msg: Message):
 def _args(msg: Message, name: str) -> str:
     return msg.text.removeprefix("/" + name).strip()
 
-def _pick_job(arg: str):
+def remember_job_message(sent, shown):
+    import job_store
+    if sent is not None and getattr(sent, 'chat', None) is not None:
+        job_store.remember_message(DB_PATH, sent.chat.id, sent.message_id, shown)
+
+
+def _pick_job(arg: str, msg=None):
+    import job_store
     first = arg.split()[0] if arg.split() else ""
-    if first.isdigit() and 1 <= int(first) <= len(LAST_JOBS):
-        return LAST_JOBS[int(first) - 1]
-    return None
+    reply = getattr(msg, 'reply_to_message', None)
+    chat = getattr(msg, 'chat', None)
+    return job_store.resolve(DB_PATH, first,
+        chat_id=chat.id if chat else None,
+        message_id=reply.message_id if reply else None)
 
 @dp.message(Command("fit"))
 async def cmd_fit(msg: Message):
     if not allowed(msg): return
-    job = _pick_job(_args(msg, "fit"))
+    job = _pick_job(_args(msg, "fit"), msg)
     if not job:
-        await msg.answer("Usage: /fit <number from the last /jobs list>. Send /jobs first if the list is empty.")
+        await msg.answer("Usage: /fit <job ID>, or reply to its jobs message with /fit <number>.")
         return
     await bot.send_chat_action(msg.chat.id, "typing")
     profile = await asyncio.to_thread(apply.load_profile)
     score, text, resume = await apply.fit_check(profile, job, one_shot)
     if resume:
         LAST_FIT[job["url"]] = resume
-    await msg.answer(f"{job['company']}: {job['title']}\n\n{text}\n\nSave it with /save or mark it with /applied {_args(msg, 'fit').split()[0]}.")
+    await msg.answer(f"{job['company']}: {job['title']}\n\n{text}\n\nSave it with /save {job['job_id']} or mark it with /applied {job['job_id']}.")
 
 @dp.message(Command("save"))
 async def cmd_save(msg: Message):
     if not allowed(msg): return
-    job = _pick_job(_args(msg, "save"))
+    job = _pick_job(_args(msg, "save"), msg)
     if not job:
-        await msg.answer("Usage: /save <number from the last /jobs list>")
+        await msg.answer("Usage: /save <job ID>, or reply to its jobs message with /save <number>.")
         return
     i = apply.add(DB_PATH, job["company"], job["title"], job["url"], "saved", resume=LAST_FIT.get(job["url"], ""))
-    await msg.answer(f"Saved #{i}: {job['company']} - {job['title']}\nWhen you apply, send /applied {_args(msg, 'save').split()[0]} (I will remind you to follow up in a week).")
+    await msg.answer(f"Saved #{i}: {job['company']} - {job['title']}\nWhen you apply, send /applied {job['job_id']} (I will remind you to follow up in a week).")
 
 @dp.message(Command("applied"))
 async def cmd_applied(msg: Message):
@@ -1776,9 +1819,9 @@ async def cmd_applied(msg: Message):
             await msg.answer("Usage: /applied <number>  or  /applied Company | Role | resume (resume is optional)")
             return
     else:
-        job = _pick_job(arg)
+        job = _pick_job(arg, msg)
         if not job:
-            await msg.answer("Usage: /applied <number from the last /jobs list> [resume name]  or  /applied Company | Role | resume")
+            await msg.answer("Usage: /applied <job ID> [resume], or reply to its jobs message with /applied <number>. Also: /applied Company | Role | resume")
             return
         words = arg.split()
         resume = words[1].lower() if len(words) > 1 else LAST_FIT.get(job["url"], "")
