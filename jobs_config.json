@@ -6108,7 +6108,7 @@
   "3": 2,
   "4": 0
  },
- "min_pay": 150000,
+ "min_pay": 135000,
  "max_age_days": 60,
  "ratings_note": "pay, prestige, wlb (work-life balance), exits (exit opportunities), 1-5, and sponsor (usually sponsors H-1B) are estimates by Claude Fable 5.1 on Oct 18 2026 from general knowledge, not measured data. Tier = sum of the four scores: 17+ tier 1, 15-16 tier 2, 12-14 tier 3, else 4.",
  "max_level": 1,
