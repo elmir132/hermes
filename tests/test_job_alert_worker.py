@@ -288,7 +288,7 @@ class AdditionalPolicyTests(unittest.IsolatedAsyncioTestCase):
                 coro.close()
             env = main_functions({'main'}, dict(
                 asyncio=SimpleNamespace(create_task=start), init_db=lambda:None, init_honcho=lambda:None,
-                PANDASCORE_TOKEN='', DIGEST_DAILY=False, JOBS_DAILY=False,
+                PANDASCORE_TOKEN='', DIGEST_DAILY=False, JOBS_DAILY=False, FAST_LANE=False,
                 job_alert_worker=SimpleNamespace(enabled=lambda:enabled), _job_alert_loop=alerts,
                 _followup_loop=followup, dp=SimpleNamespace(start_polling=AsyncMock()), bot=None))
             await env['main']()

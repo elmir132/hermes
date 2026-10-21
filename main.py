@@ -1589,6 +1589,45 @@ async def run_jobs(mark: bool = True, include_seen: bool = False, ack_keys=None)
         text += "\nJob alerts: " + "; ".join(alert_errors[:3])
     return text
 
+FAST_LANE = os.environ.get("JOBS_FAST_LANE", "on").lower() != "off"       # hourly check of the top companies
+FAST_LANE_MINUTES = max(30, int(os.environ.get("JOBS_FAST_LANE_MINUTES", "60") or 60))
+
+
+async def run_fast_lane(now=None):
+    """Read only the top companies on light readers and send roles that appeared since the last check.
+    Same filters and seen-store as the daily list, so nothing is sent twice. Returns the number sent."""
+    cfg = await asyncio.to_thread(jobs.load_config)
+    if jobs.fast_lane_quiet(now, (cfg.get("fast_lane") or {}).get("quiet")):
+        return 0                                          # overnight: these roles are picked up at 7 AM
+    lane = dict(cfg, companies=jobs.fast_lane_companies(cfg))
+    known = await asyncio.to_thread(jobs.fast_lane_known, DB_PATH)
+    async with JOBS_RUN_LOCK:
+        acknowledgement, shown, met = [], [], []
+        text, count, _ = await jobs.scan(lane, _jobs_get, DB_PATH, mark=False, now=now, collect=shown,
+                                         get_html=_jobs_get_html, ack_keys=acknowledgement,
+                                         exclude_keys=known, candidate_keys=met)
+        if known is None:                                 # first run: learn today's backlog, send nothing
+            count = 0                                     # (the backlog stays in the daily list)
+        elif count:
+            roles = text.split("\n\n• ", 1)[-1].rsplit("\nVisa and experience notes", 1)[0]
+            await bot.send_message(ALLOWED_USER, f"⚡ New at top companies ({count})\n\n• " + roles,
+                                   parse_mode=None, disable_web_page_preview=True)
+            LAST_JOBS[:] = shown
+            jobs.mark_seen(DB_PATH, acknowledgement)
+        await asyncio.to_thread(jobs.fast_lane_remember, DB_PATH, met)
+    return count
+
+
+async def _jobs_fast_loop():
+    await asyncio.sleep(300)                              # let the bot settle after a restart
+    while True:
+        try:
+            await run_fast_lane()
+        except Exception as exc:                          # logged, never fatal; the daily list still runs
+            print(f"[jobs fast lane] failed: {type(exc).__name__}: {exc}")
+        await asyncio.sleep(FAST_LANE_MINUTES * 60)
+
+
 async def _jobs_loop():
     await asyncio.sleep(45)
     while True:
@@ -2007,6 +2046,8 @@ async def main():
         asyncio.create_task(_digest_loop())
     if JOBS_DAILY:
         asyncio.create_task(_jobs_loop())
+    if FAST_LANE:
+        asyncio.create_task(_jobs_fast_loop())
     if job_alert_worker.enabled():
         asyncio.create_task(_job_alert_loop())
     asyncio.create_task(_followup_loop())

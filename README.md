@@ -144,6 +144,8 @@ All secrets come from the environment — nothing is hardcoded. See `.env.exampl
 | `DIGEST_HOUR` | hour (New York time) of the daily digest, default 8 |
 | `DIGEST_DAILY` | set to `off` to disable the daily message |
 | `JOBS_DAILY` | set to `off` to disable the daily job list |
+| `JOBS_FAST_LANE` | set to `off` to disable the hourly check of top-tier companies (tiers 1-2 on light API readers; sends only roles that appeared since the previous check, nothing 23:00-07:00 New York time; the first run only learns the current backlog) |
+| `JOBS_FAST_LANE_MINUTES` | minutes between fast-lane checks (default 60, minimum 30) |
 | `HERMES_JOB_ALERT_RECORDS` | `1` enables the independent job-alert email worker; default off |
 | `HERMES_JOB_ALERT_SENDERS` | comma-separated exact, verified email sender addresses |
 | `HERMES_JOB_ALERT_ACCOUNTS` | optional local account labels; empty uses working accounts |

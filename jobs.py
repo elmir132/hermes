@@ -1302,6 +1302,52 @@ def _db(path):
     return con
 
 
+# ---------- fast lane: top companies checked every hour so new roles arrive within the hour ----------
+FAST_LANE_TIERS = (1, 2)
+# Readers that cost one or a few light API requests per company. Page-scraping or very large readers
+# (Google, Apple, Avature paging, sitemaps, the Mac browser file, Hacker News) stay daily only.
+FAST_LANE_PROVIDERS = ("greenhouse", "lever", "ashby", "gem", "rippling", "jibe", "workday", "atlassian",
+                       "deshaw", "uber", "workable", "tiktok", "oracle")
+FAST_LANE_QUIET = (23, 7)       # New York hours: nothing is sent from 23:00 to 06:59; those roles go out at 7
+
+
+def fast_lane_companies(cfg: dict) -> list:
+    """The companies the hourly check reads: top tiers on light readers (config `fast_lane` can override)."""
+    lane = cfg.get("fast_lane") or {}
+    tiers = tuple(lane.get("tiers", FAST_LANE_TIERS))
+    providers = tuple(lane.get("providers", FAST_LANE_PROVIDERS))
+    extra = set(lane.get("include", ["Two Sigma"]))    # tier 1 but on a paged reader: about 10 light pages
+    return [c for c in cfg.get("companies", [])
+            if (c.get("tier") in tiers and c.get("provider") in providers) or c.get("name") in extra]
+
+
+def fast_lane_quiet(now=None, quiet=None) -> bool:
+    """True during the night window in New York time, when the hourly check sends nothing."""
+    from zoneinfo import ZoneInfo
+    start, end = quiet or FAST_LANE_QUIET
+    hour = (now or datetime.now(timezone.utc)).astimezone(ZoneInfo("America/New_York")).hour
+    return (hour >= start or hour < end) if start > end else (start <= hour < end)
+
+
+def fast_lane_known(path):
+    """Keys the hourly check has already met (sent or left for the daily list). None before its first run."""
+    with closing(_db(path)) as con:
+        con.execute("CREATE TABLE IF NOT EXISTS jobs_fast_known (job_key TEXT PRIMARY KEY, met_at TEXT)")
+        rows = {r[0] for r in con.execute("SELECT job_key FROM jobs_fast_known")}
+        started = con.execute("SELECT 1 FROM jobs_fast_known WHERE job_key = '__baseline__'").fetchone()
+    return rows if started else None
+
+
+def fast_lane_remember(path, keys, now=None):
+    now = now or datetime.now(timezone.utc)
+    with closing(_db(path)) as con, con:
+        con.execute("CREATE TABLE IF NOT EXISTS jobs_fast_known (job_key TEXT PRIMARY KEY, met_at TEXT)")
+        con.executemany("INSERT OR IGNORE INTO jobs_fast_known VALUES (?, ?)",
+                        [(k, now.isoformat()) for k in ["__baseline__", *keys]])
+        con.execute("DELETE FROM jobs_fast_known WHERE met_at < ? AND job_key != '__baseline__'",
+                    ((now - timedelta(days=120)).isoformat(),))
+
+
 def seen_keys(path, keys):
     with closing(_db(path)) as con:
         have = {r[0] for r in con.execute("SELECT job_key FROM jobs_seen")}
@@ -1383,7 +1429,7 @@ def _source_status_summary(results, status_by_key):
 
 
 # ---------- the scan ----------
-async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None, get_html=None, alert_jobs=None, alert_only=False, ack_keys=None):
+async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None, get_html=None, alert_jobs=None, alert_only=False, ack_keys=None, exclude_keys=None, candidate_keys=None):
     """get_json(url) -> (status, JSON); get_html(url) -> (status, text). Returns text, count and errors."""
     candidates, errors, prefiltered_keys = [], [], []
     if ack_keys is not None:
@@ -1539,6 +1585,10 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
         ack_keys.extend(url_aliases[j['key']] for _, _, j in candidates
                         if j['key'] in old or url_aliases[j['key']] in old_urls)
     fresh = [(p, s, j) for p, s, j in candidates if j["key"] not in old and url_aliases[j["key"]] not in old_urls]
+    if candidate_keys is not None:                               # the fast lane remembers what it has already met
+        candidate_keys.extend(j["key"] for _, _, j in fresh)
+    if exclude_keys:
+        fresh = [(p, s, j) for p, s, j in fresh if j["key"] not in exclude_keys]
     unique = {}
     for p, slug, job in fresh:
         unique.setdefault(url_aliases[job["key"]] or job["key"], (p, slug, job))
