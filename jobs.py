@@ -1189,6 +1189,26 @@ def pay_label(pay) -> str:
     return f"pay: {f(pay[0])} to {f(pay[1])} base"
 
 
+EXTRA_PAY = [
+    # Written so that "bonus points if you know Rust" and "diversity, equity and inclusion" don't count.
+    ("bonus", re.compile(r"\b(?:annual|performance|target|discretionary|cash|year[- ]end)[- ]bonus|\bbonus(?:es)?\s+(?:eligib|plan|program|target|opportunit|potential)"
+                         r"|\beligible (?:for|to receive) (?:an? )?(?:annual |performance |discretionary )?bonus", re.I)),
+    ("sign-on", re.compile(r"\bsign(?:ing|-on| on)[- ]bonus", re.I)),
+    ("equity", re.compile(r"\bRSUs?\b|restricted stock|stock options?|stock (?:grant|award|units)|equity (?:grant|package|award|compensation|refresh)"
+                          r"|(?:includes?|plus|and|\+)\s+(?:company )?equity\b|\bequity\s*(?:and|\+|,)\s*(?:bonus|benefits)"
+                          r"|\bbonus(?:es| programs?)?,?\s+(?:and\s+)?equity\b|\bequity (?:ownership|eligib)|\bequity,?\s+(?:and\s+)?(?:the\s+)?benefits", re.I)),
+]
+
+
+DEI = re.compile(r"(?:diversity|inclusion|belonging)[^.\n]{0,40}equity|equity[^.\n]{0,40}(?:inclusion|belonging|diversity)|pay equity|health equity", re.I)
+
+
+def extra_pay(text: str) -> list:
+    """Kinds of pay on top of base that the posting mentions (amounts are almost never stated)."""
+    text = DEI.sub(" ", text or "")
+    return [name for name, pattern in EXTRA_PAY if pattern.search(text)]
+
+
 def pay_ok(pay, cfg) -> bool:
     """Unknown pay passes (the bot cannot tell); a known range whose top is below the minimum does not."""
     floor = cfg.get("min_pay")
@@ -1679,7 +1699,8 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 continue
             visa_notes = [f for f in visa_flags(job["text"], job.get("ratings"))
                           if f != "⚠️ citizenship or clearance required"]
-            job["flags"] = ([pay_label(job["pay"])] + visa_notes + eligibility
+            extras = extra_pay(job["text"])
+            job["flags"] = ([pay_label(job["pay"]) + (" + " + ", ".join(extras) + " mentioned" if extras else "")] + visa_notes + eligibility
                              + ([f"asks for {years}+ years"] if years and years >= 3 else []))
         shown.append((provider, slug, job))
         per_company[job["company"]] = per_company.get(job["company"], 0) + 1

@@ -113,5 +113,21 @@ class MetaCardTests(unittest.TestCase):
         self.assertEqual(len(br.parse_meta_cards(cards)), 3)
 
 
+class ExtraPayTests(unittest.TestCase):
+    def test_bonus_stock_and_sign_on_are_noticed(self):
+        self.assertEqual(jobs.extra_pay("Base $140k-$170k. You'll be eligible for an annual bonus and RSUs."), ["bonus", "equity"])
+        self.assertEqual(jobs.extra_pay("We offer a signing bonus plus equity."), ["sign-on", "equity"])
+        self.assertEqual(jobs.extra_pay("may also include eligibility for annual performance bonus, equity, and the benefits listed"),
+                         ["bonus", "equity"])
+        self.assertEqual(jobs.extra_pay("multipliers for outsized impact, bonus programs, equity ownership"), ["bonus", "equity"])
+        self.assertEqual(jobs.extra_pay("Total compensation includes base salary, stock options and benefits."), ["equity"])
+
+    def test_common_false_alarms_are_ignored(self):
+        self.assertEqual(jobs.extra_pay("Bonus points if you know Rust."), [])
+        self.assertEqual(jobs.extra_pay("We value diversity, equity and inclusion."), [])
+        self.assertEqual(jobs.extra_pay("We care about diversity and equity in hiring."), [])
+        self.assertEqual(jobs.extra_pay(""), [])
+
+
 if __name__ == "__main__":
     unittest.main()
