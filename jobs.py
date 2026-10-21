@@ -1383,10 +1383,12 @@ def _source_status_summary(results, status_by_key):
 
 
 # ---------- the scan ----------
-async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None, get_html=None, alert_jobs=None):
+async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None, get_html=None, alert_jobs=None, alert_only=False, ack_keys=None):
     """get_json(url) -> (status, JSON); get_html(url) -> (status, text). Returns text, count and errors."""
     candidates, errors, prefiltered_keys = [], [], []
-    companies = cfg.get("companies", [])
+    if ack_keys is not None:
+        ack_keys[:] = []
+    companies = [] if alert_only else cfg.get("companies", [])
     public = None
     if any(c.get("public_feed") or c.get("guarded") or c.get("paced") or c.get("provider") in ("ashby_html", "morganstanley", "intuit", "workable", "sitemap_jobs", "teamtailor_rss", "guardant", "recruitee") for c in companies):
         from public_jobs import PublicJobsClient
@@ -1473,7 +1475,6 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 found, err = (jobs_from_feed(provider, payload, name), None) if status == 200 else ([], f"HTTP {status}")
         return company, provider, slug, name, found, err
 
-    companies = cfg.get("companies", [])
     gathered = await asyncio.gather(*(read_company(c) for c in companies), return_exceptions=True)
     results = []
     for company, result in zip(companies, gathered):
@@ -1495,10 +1496,11 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             if url_key(job.get("url", "")) in native_urls:
                 continue
             if cfg.get("hide_ineligible", True) and any(f in INELIGIBLE for f in eligibility_flags(job.get("text", ""))):
+                prefiltered_keys.append(job['key'])
                 continue
             grouped.setdefault(job["company"], []).append(dict(job))
         for name, records in grouped.items():
-            company = next((c for c in companies if c["name"].casefold() == name.casefold()), {"name": name, "tier": 0})
+            company = next((c for c in cfg.get("companies", []) if c["name"].casefold() == name.casefold()), {"name": name, "tier": 0})
             for record in records:
                 record["key"] = native_key(record, company)
                 record["company"] = company["name"]
@@ -1518,7 +1520,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             if scored:
                 job["score"], job["reasons"] = scored
                 candidates.append((provider, slug, job))
-            elif (provider in ("intuit", "workable", "sitemap_jobs", "teamtailor_rss", "guardant", "recruitee") or
+            elif (provider in ("intuit", "workable", "sitemap_jobs", "teamtailor_rss", "guardant", "recruitee", "email_alert") or
                   (provider == "workday" and company.get("paced") and job.get("details_checked"))):
                 # Complete, rejected details should not consume tomorrow's cap.
                 prefiltered_keys.append(job["key"])
@@ -1533,6 +1535,9 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     from job_alerts import url_key
     url_aliases = {j["key"]: url_key(j["url"]) for _, _, j in candidates}
     old_urls = set() if include_seen else seen_keys(db_path, list(filter(None, url_aliases.values())))
+    if ack_keys is not None:
+        ack_keys.extend(url_aliases[j['key']] for _, _, j in candidates
+                        if j['key'] in old or url_aliases[j['key']] in old_urls)
     fresh = [(p, s, j) for p, s, j in candidates if j["key"] not in old and url_aliases[j["key"]] not in old_urls]
     unique = {}
     for p, slug, job in fresh:
@@ -1613,6 +1618,11 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                              + ([f"asks for {years}+ years"] if years and years >= 3 else []))
         shown.append((provider, slug, job))
         per_company[job["company"]] = per_company.get(job["company"], 0) + 1
+    if ack_keys is not None:
+        # Deferred acknowledgement lets callers wait for successful delivery.
+        # Include URL aliases so rejected email records leave the pending queue.
+        aliases = {j['key']: url_key(j['url']) for result in results for j in result[4]}
+        ack_keys.extend(k for key in skipped_keys for k in (key, aliases.get(key)) if k)
     if mark:
         mark_seen(db_path, skipped_keys)
     hidden_note = (f"\nHidden: {hidden_ineligible} posting{'s' if hidden_ineligible != 1 else ''} that say U.S. citizenship, "
@@ -1634,8 +1644,13 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
         lines.append(f"\n• {j['company']}{tier}: {j['title']}  #{n}\n  {where}{' (remote ok)' if j['remote'] else ''}{posted}\n  {'; '.join(j['flags'])}\n  {j['url']}")
     lines.append("\nVisa and experience notes are only hints from the posting text. Read the posting before relying on them.")
     text = "\n".join(lines)[:OUTPUT_CHARS] + _errs(errors)
+    delivered = [key for _, _, j in shown for key in (j["key"], url_key(j["url"])) if key]
+    if ack_keys is not None:
+        # Truncated messages must not acknowledge listings the reader never saw.
+        ack_keys.extend(key for _, _, j in shown if j['url'] in text
+                        for key in (j['key'], url_key(j['url'])) if key)
     if mark:
-        mark_seen(db_path, [key for _, _, j in shown for key in (j["key"], url_key(j["url"])) if key])
+        mark_seen(db_path, delivered)
     return text, len(shown), errors
 
 

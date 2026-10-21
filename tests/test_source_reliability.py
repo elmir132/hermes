@@ -1,5 +1,6 @@
 """Bounded, polite source reads and honest failures under transient load."""
 import asyncio
+from contextlib import closing
 import json
 from pathlib import Path
 import sqlite3
@@ -88,7 +89,7 @@ class WorkdayReliabilityTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmp, patch('public_jobs.PublicJobsClient', factory):
                 db = Path(tmp) / 'jobs.db'
                 text, count, errors = asyncio.run(jobs.scan(dict(CFG, companies=[SF]), forbidden, db, mark=False))
-                with sqlite3.connect(db) as con:
+                with closing(sqlite3.connect(db)) as con:
                     status = con.execute('select last_result_count,last_error from jobs_source_status').fetchone()
             details = [u for u, b in calls if b is None and not u.endswith('/robots.txt')]
             self.assertEqual(len(details), 1 if failure else 3)

@@ -23,6 +23,7 @@ import apply
 import campus
 import digest
 import jobs
+import job_alert_worker
 import luma
 import signin
 
@@ -1567,19 +1568,21 @@ async def _jobs_get_html(url):
                 await asyncio.sleep(2)
     return 0, ""
 
+JOBS_RUN_LOCK = asyncio.Lock()  # Serialize email/native delivery and shared seen-store acknowledgement.
+
 LAST_JOBS: list = []          # what /jobs showed last, so "/fit 3" and "/applied 3" know which role you mean
 LAST_FIT: dict = {}           # job url -> resume name suggested by /fit
 
-async def run_jobs(mark: bool = True, include_seen: bool = False) -> str:
+async def run_jobs(mark: bool = True, include_seen: bool = False, ack_keys=None) -> str:
     cfg = await asyncio.to_thread(jobs.load_config)
     alert_jobs, alert_errors = [], []
     if os.environ.get("HERMES_JOB_ALERT_RECORDS") == "1" and digest.parse_job_alert_senders():
         import job_alerts
-        accounts = await asyncio.to_thread(_all_creds)
-        alert_jobs, alert_errors = await job_alerts.fetch_records([(name, creds.token) for name, creds in accounts], _digest_get, DB_PATH)
+        accounts = await asyncio.to_thread(_job_alert_accounts)
+        alert_jobs, alert_errors = await job_alerts.fetch_records(accounts, _digest_get, DB_PATH)
     shown: list = []
     text, _, _ = await jobs.scan(cfg, _jobs_get, DB_PATH, mark=mark, include_seen=include_seen,
-                                 collect=shown, get_html=_jobs_get_html, alert_jobs=alert_jobs)
+                                 collect=shown, get_html=_jobs_get_html, alert_jobs=alert_jobs, ack_keys=ack_keys)
     if shown:
         LAST_JOBS[:] = shown
     if alert_errors:
@@ -1591,7 +1594,12 @@ async def _jobs_loop():
     while True:
         await asyncio.sleep(digest.seconds_until(DIGEST_HOUR) + 600)
         try:
-            await bot.send_message(ALLOWED_USER, "💼 Job watch\n\n" + await run_jobs(mark=True))
+            async with JOBS_RUN_LOCK:
+                acknowledgement = []
+                text = await run_jobs(mark=False, ack_keys=acknowledgement)
+                await bot.send_message(ALLOWED_USER, "💼 Job watch\n\n" + text,
+                                       parse_mode=None, disable_web_page_preview=True)
+                jobs.mark_seen(DB_PATH, acknowledgement)
         except Exception:
             pass
         await asyncio.sleep(60)
@@ -1601,7 +1609,81 @@ async def cmd_jobs(msg: Message):
     if not allowed(msg): return
     await msg.answer("Checking the job boards, this takes about a minute...")
     show_all = "all" in msg.text.lower().split()
-    await msg.answer(await run_jobs(mark=not show_all, include_seen=show_all))
+    async with JOBS_RUN_LOCK:
+        acknowledgement = []
+        text = await run_jobs(mark=False, include_seen=show_all, ack_keys=acknowledgement)
+        await msg.answer(text, parse_mode=None, disable_web_page_preview=True)
+        if not show_all:
+            jobs.mark_seen(DB_PATH, acknowledgement)
+
+
+def _job_alert_accounts():
+    wanted = job_alert_worker.account_names()
+    accounts = []
+    for path in _all_token_files():
+        name = path.stem.removeprefix('token_')
+        if wanted and name not in wanted:
+            continue
+        creds = _load_creds(path)
+        if creds:
+            accounts.append((name, creds.token))
+    return accounts
+
+
+async def _poll_job_alerts():
+    def remember(shown):
+        LAST_JOBS[:] = shown
+    async def publish(text):
+        await bot.send_message(ALLOWED_USER, text, parse_mode=None, disable_web_page_preview=True)
+    async with JOBS_RUN_LOCK:
+        # No mailbox access without exact configured senders.
+        accounts = await asyncio.to_thread(_job_alert_accounts) if digest.parse_job_alert_senders() else []
+        result = await job_alert_worker.run_once(
+            await asyncio.to_thread(jobs.load_config), accounts, _digest_get, DB_PATH, publish, on_delivered=remember)
+        if result['shown']:
+            LAST_JOBS[:] = result['shown']
+    return result
+
+
+async def _job_alert_loop():
+    await asyncio.sleep(45)
+    while True:
+        try:
+            await _poll_job_alerts()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            error = 'worker failure: ' + type(exc).__name__
+            print('Job-alert ' + error, flush=True)
+            previous = job_alert_worker.status(DB_PATH)
+            job_alert_worker.save_status(DB_PATH, int(time.time()), error)
+            if previous['last_notice'] != error:
+                try:
+                    await bot.send_message(ALLOWED_USER, '⚠️ Job-alert reader: ' + error,
+                                           parse_mode=None, disable_web_page_preview=True)
+                    job_alert_worker.save_status(DB_PATH, int(time.time()), error, notice=error)
+                except Exception:
+                    pass  # Telegram outage: leave notice pending for the next poll.
+        await asyncio.sleep(job_alert_worker.interval())
+
+
+@dp.message(Command('jobalerts'))
+async def cmd_jobalerts(msg: Message):
+    if not allowed(msg): return
+    action = msg.text.split(maxsplit=1)[1].strip().lower() if len(msg.text.split(maxsplit=1)) == 2 else ''
+    if action in ('poll', 'retry') and not job_alert_worker.enabled():
+        await msg.answer('Job-alert reader is disabled. Configure it after validating real alert emails.')
+        return
+    if action == 'poll':
+        await _poll_job_alerts()
+    elif action == 'retry':
+        async with JOBS_RUN_LOCK:
+            job_alert_worker.retry(DB_PATH)
+    elif action:
+        await msg.answer('Usage: /jobalerts, /jobalerts poll, or /jobalerts retry')
+        return
+    await msg.answer(job_alert_worker.format_status(DB_PATH), parse_mode=None, disable_web_page_preview=True)
+
 
 # ── Applying: tracker, fit check, follow-ups (nothing here applies to anything) ──
 def _args(msg: Message, name: str) -> str:
@@ -1925,6 +2007,8 @@ async def main():
         asyncio.create_task(_digest_loop())
     if JOBS_DAILY:
         asyncio.create_task(_jobs_loop())
+    if job_alert_worker.enabled():
+        asyncio.create_task(_job_alert_loop())
     asyncio.create_task(_followup_loop())
     await dp.start_polling(bot)
 

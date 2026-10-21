@@ -144,8 +144,16 @@ All secrets come from the environment — nothing is hardcoded. See `.env.exampl
 | `DIGEST_HOUR` | hour (New York time) of the daily digest, default 8 |
 | `DIGEST_DAILY` | set to `off` to disable the daily message |
 | `JOBS_DAILY` | set to `off` to disable the daily job list |
+| `HERMES_JOB_ALERT_RECORDS` | `1` enables the independent job-alert email worker; default off |
+| `HERMES_JOB_ALERT_SENDERS` | comma-separated exact, verified email sender addresses |
+| `HERMES_JOB_ALERT_ACCOUNTS` | optional local account labels; empty uses working accounts |
+| `HERMES_JOB_ALERT_INTERVAL_SECONDS` | mailbox poll interval, default 300 seconds |
 
 Access is restricted to `ALLOWED_USER_ID`; every handler checks it before doing any work.
+
+## Job-alert email setup
+
+See [job-alert setup and recovery](docs/job-alerts.md) for official signup routes, real-template validation, the opt-in mailbox worker and `/jobalerts` commands. The worker reads subscribed mail independently of daily board scans and acknowledges listings after Telegram delivery. Unsupported emails are retained for parser support.
 
 ## License
 

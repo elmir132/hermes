@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from contextlib import closing
 import sys
 import tempfile
 import unittest
@@ -96,7 +97,7 @@ class SourceStatusTests(unittest.TestCase):
 
     def test_the_table_is_created_in_the_jobs_database(self):
         jobs._record_source_status(self.db, [self.result("Stripe")], self.t0)
-        with sqlite3.connect(self.db) as con:
+        with closing(sqlite3.connect(self.db)) as con:
             self.assertEqual(con.execute("SELECT COUNT(*) FROM jobs_source_status").fetchone()[0], 1)
 
 

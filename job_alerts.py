@@ -11,6 +11,7 @@ import re
 import sqlite3
 import time
 from contextlib import closing
+from email.utils import parseaddr
 from html.parser import HTMLParser
 from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 
@@ -19,6 +20,8 @@ import digest
 MAX_EMAILS = 8
 MAX_LIST_PAGES = 4
 MAX_LISTINGS = 100
+MAX_BODY = 200000
+PARSER_VERSION = 1
 
 
 def canonical_url(value):
@@ -132,7 +135,7 @@ def parse_listings(body):
             combined = [x for x in combined if len(x) == 2]
             if len(combined) == 1:
                 company, location = combined[0]
-        row = record(title, company, location, url)
+        row = record(title, company, location, url, text=' '.join(lines))
         if row:
             out.append(row)
     return list({r['key']: r for r in out[:MAX_LISTINGS]}.values())
@@ -144,6 +147,14 @@ def _db(path):
     CREATE TABLE IF NOT EXISTS job_alert_queue (key TEXT PRIMARY KEY, payload TEXT NOT NULL, added INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS job_alert_mail_seen (account TEXT, message_id TEXT, PRIMARY KEY(account,message_id));
     CREATE TABLE IF NOT EXISTS job_alert_cursor (account TEXT PRIMARY KEY, payload TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS job_alert_unparsed (
+        account TEXT, message_id TEXT, body TEXT NOT NULL, version INTEGER NOT NULL,
+        added INTEGER NOT NULL, updated INTEGER NOT NULL, sender TEXT NOT NULL DEFAULT '', PRIMARY KEY(account,message_id));
+    CREATE TABLE IF NOT EXISTS jobs_seen (job_key TEXT PRIMARY KEY, seen_at TEXT);
+    CREATE TABLE IF NOT EXISTS job_alert_worker_status (
+        id INTEGER PRIMARY KEY, last_attempt INTEGER, last_success INTEGER,
+        last_error TEXT, last_notice TEXT);
+
     ''')
     return con
 
@@ -153,6 +164,71 @@ def _html_body(payload):
     if payload.get('mimeType') == 'text/html':
         return digest._decode((payload.get('body') or {}).get('data', ''))[:200000]
     return '\n'.join(_html_body(p) for p in payload.get('parts', []))[:200000]
+
+
+class JobLinks(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.links = set()
+
+    def handle_starttag(self, tag, attrs):
+        if tag != 'a':
+            return
+        link = canonical_url(dict(attrs).get('href', ''))
+        path = urlsplit(link).path
+        if (re.search(r'/jobs?/|/postings/', path) and
+                not re.search(r'/jobs?/(?:search|alerts?|results)(?:/|$)', path)):
+            self.links.add(link)
+
+
+def parse_email(body):
+    try:
+        records = parse_listings(body)
+        links = JobLinks()
+        links.feed(body[:MAX_BODY])
+        complete = bool(records) and len(body) < MAX_BODY and links.links.issubset({r['url'] for r in records})
+        return records, complete
+    except Exception:
+        # A malformed/unsupported email must not wedge later mailbox pages.
+        # Keep its bounded body and expose the unresolved-template count.
+        return [], False
+
+
+def _queue(con, records, now):
+    con.executemany('INSERT OR IGNORE INTO job_alert_queue VALUES (?,?,?)',
+                    [(r['key'], json.dumps(r), now) for r in records])
+
+
+def _pending(con):
+    return [json.loads(row[0]) for row in con.execute(
+        'SELECT payload FROM job_alert_queue q WHERE NOT EXISTS '
+        '(SELECT 1 FROM jobs_seen s WHERE s.job_key=q.key) ORDER BY added,key')]
+
+
+def pending_records(path):
+    with closing(_db(path)) as con:
+        return _pending(con)
+
+
+def retry_unparsed(con, now, senders, force=False):
+    # Retry cached bodies after a parser upgrade or an explicit user request.
+    # A bounded, oldest-first retry cannot consume the eight network-email cap.
+    if not senders:
+        return 0
+    placeholders = ','.join('?' for _ in senders)
+    rows = con.execute('SELECT account,message_id,body FROM job_alert_unparsed '
+                       f'WHERE version < ? AND sender IN ({placeholders}) ORDER BY updated,account,message_id LIMIT 2',
+                       (PARSER_VERSION + 1 if force else PARSER_VERSION, *senders)).fetchall()
+    for account, message_id, body in rows:
+        records, complete = parse_email(body)
+        _queue(con, records, now)
+        if complete:
+            con.execute('INSERT OR IGNORE INTO job_alert_mail_seen VALUES (?,?)', (account, message_id))
+            con.execute('DELETE FROM job_alert_unparsed WHERE account=? AND message_id=?', (account, message_id))
+        else:
+            con.execute('UPDATE job_alert_unparsed SET version=?,updated=? WHERE account=? AND message_id=?',
+                        (PARSER_VERSION, now, account, message_id))
+    return len(rows)
 
 
 async def fetch_records(accounts, get_json, db_path, senders=None, now=None):
@@ -178,7 +254,7 @@ async def fetch_records(accounts, get_json, db_path, senders=None, now=None):
                 if not state['pending']:
                     if pages >= MAX_LIST_PAGES:
                         break
-                    query = digest.job_alert_query(allowed).replace('newer_than:2d', f"after:{state['after']} before:{state['before']}")
+                    query = digest.job_alert_query(allowed, subject_filter=False).replace('newer_than:2d', f"after:{state['after']} before:{state['before']}")
                     params = {'q': query, 'maxResults': min(remaining, MAX_EMAILS)}
                     if state.get('page'):
                         params['pageToken'] = state['page']
@@ -198,7 +274,8 @@ async def fetch_records(accounts, get_json, db_path, senders=None, now=None):
                         break
                 message_id = state['pending'][0]
                 seen = con.execute('SELECT 1 FROM job_alert_mail_seen WHERE account=? AND message_id=?', (account, message_id)).fetchone()
-                if not seen:
+                retained = con.execute('SELECT 1 FROM job_alert_unparsed WHERE account=? AND message_id=?', (account, message_id)).fetchone()
+                if not seen and not retained:
                     remaining -= 1
                     status, message = await get_json('https://gmail.googleapis.com/gmail/v1/users/me/messages/' + message_id, token, {'format': 'full'})
                     if status != 200:
@@ -206,14 +283,22 @@ async def fetch_records(accounts, get_json, db_path, senders=None, now=None):
                         errors.append(f'{account}: alert message HTTP {status}')
                         break  # Keep the ID pending on failure.
                     payload = (message or {}).get('payload') or {}
-                    records = []
                     if digest._sender_matches_allowlist(digest.header(payload, 'From'), allowed):
-                        records = parse_listings(_html_body(payload))
-                        if not records:
-                            errors.append(f'{account}: alert template has no recognized listings')
-                    with con:
-                        con.executemany('INSERT OR IGNORE INTO job_alert_queue VALUES (?,?,?)', [(r['key'], json.dumps(r), now) for r in records])
-                        con.execute('INSERT OR IGNORE INTO job_alert_mail_seen VALUES (?,?)', (account, message_id))
+                        body = _html_body(payload)[:MAX_BODY]
+                        records, complete = parse_email(body)
+                        with con:
+                            _queue(con, records, now)
+                            if complete:
+                                con.execute('INSERT OR IGNORE INTO job_alert_mail_seen VALUES (?,?)', (account, message_id))
+                            else:
+                                # Advance the mailbox cursor without losing an unsupported
+                                # template or blocking other mail behind it. Never mark seen.
+                                con.execute('INSERT OR REPLACE INTO job_alert_unparsed VALUES (?,?,?,?,?,?,?)',
+                                            (account, message_id, body, PARSER_VERSION, now, now, parseaddr(digest.header(payload, 'From'))[1].lower()))
+                    else:
+                        # Exact sender recheck rejects search false positives.
+                        with con:
+                            con.execute('INSERT OR IGNORE INTO job_alert_mail_seen VALUES (?,?)', (account, message_id))
                 state['pending'].pop(0)
                 if not state['pending'] and not state.get('page'):
                     state.update(after=max(state['after'], state['before']-3600), before=now, page=None)
@@ -222,8 +307,15 @@ async def fetch_records(accounts, get_json, db_path, senders=None, now=None):
             with con:
                 con.execute('INSERT OR REPLACE INTO job_alert_cursor VALUES (?,?)', (account, json.dumps(state)))
         with con:
-            con.execute('DELETE FROM job_alert_queue WHERE added < ?', (now-30*86400,))
-        queued = [json.loads(v) for (v,) in con.execute('SELECT payload FROM job_alert_queue ORDER BY added DESC LIMIT 1000')]
+            retry_unparsed(con, now, allowed)
+            # Never expire an undelivered record or hide older work behind a
+            # newest-1000 slice. Delivered records can be cleaned up safely.
+            con.execute('DELETE FROM job_alert_queue WHERE added < ? AND key IN (SELECT job_key FROM jobs_seen)', (now-30*86400,))
+        unresolved = con.execute('SELECT COUNT(*) FROM job_alert_unparsed').fetchone()[0]
+        if unresolved:
+            errors.append(f'{unresolved} alert email(s) need parser support; retained for retry')
+        queued = _pending(con)
+
     return queued, errors
 
 

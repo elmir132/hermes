@@ -110,7 +110,7 @@ def parse_job_alert_senders(senders=None) -> tuple:
     return tuple(sorted(valid))
 
 
-def job_alert_query(senders=None):
+def job_alert_query(senders=None, subject_filter=True):
     """Build a narrow Gmail query; no configured exact sender means no alert search."""
     allowed = parse_job_alert_senders(senders)
     if not allowed:
@@ -119,7 +119,7 @@ def job_alert_query(senders=None):
     subject_group = "{subject:job subject:jobs subject:career subject:careers subject:role subject:roles " \
                     "subject:opening subject:openings subject:position subject:positions " \
                     "subject:opportunity subject:opportunities}"
-    return f"newer_than:2d -in:trash -in:spam {from_group} {subject_group}"
+    return f"newer_than:2d -in:trash -in:spam {from_group}" + (f" {subject_group}" if subject_filter else "")
 
 
 def _sender_matches_allowlist(sender: str, allowed) -> bool:
