@@ -64,5 +64,54 @@ class FastLaneScanTests(unittest.TestCase):
         self.assertEqual(sorted(met2), sorted(met))                     # both are still remembered
 
 
+class AuditFixTests(unittest.TestCase):
+    def setUp(self):
+        self.db = os.path.join(tempfile.mkdtemp(), "h.db")
+
+    def test_roles_left_over_beyond_the_cap_stay_new(self):
+        self.assertEqual(jobs.fast_lane_to_remember(None, ["a", "b"], []), ["a", "b"])       # baseline
+        self.assertEqual(jobs.fast_lane_to_remember(set(), ["a", "b", "c"], ["a", "c"]), ["a", "c"])
+
+    def test_numbers_can_continue_after_an_earlier_list(self):
+        from test_jobs import FakeFeeds, gh_job, cfg_with, NOW
+        feeds = FakeFeeds({"boards-api": {"jobs": [gh_job(1, "Software Engineer, New Grad")]}})
+        cfg = cfg_with([{"name": "Acme", "provider": "greenhouse", "slug": "acme"}])
+        text, n, _ = asyncio.run(jobs.scan(cfg, feeds, self.db, now=NOW, mark=False, number_from=13))
+        self.assertEqual(n, 1)
+        self.assertIn("#13", text)
+        self.assertNotIn("#1\n", text)
+
+    def test_a_failed_greenhouse_posting_read_is_shown_as_unchecked(self):
+        from test_jobs import FakeFeeds, gh_job, cfg_with, NOW
+        feeds = FakeFeeds({"boards-api": {"jobs": [gh_job(1, "Software Engineer, New Grad")]}}, failing=("/jobs/1?",))
+        cfg = cfg_with([{"name": "Acme", "provider": "greenhouse", "slug": "acme"}])
+        text, n, _ = asyncio.run(jobs.scan(cfg, feeds, self.db, now=NOW, mark=False))
+        self.assertEqual(n, 1)
+        self.assertIn("posting details not read", text)
+
+    def test_a_company_missing_from_the_browser_file_is_an_error_not_zero_jobs(self):
+        import json
+        path = os.path.join(tempfile.mkdtemp(), "b.json")
+        with open(path, "w") as f:
+            json.dump({"fetched_at": "2026-10-20T12:00:00Z", "sources": {"Meta": {"jobs": []}}}, f)
+        found, err = jobs.browser_jobs({"name": "Netflix"}, {}, path=path)
+        self.assertEqual(found, [])
+        self.assertIn("no Netflix section", err)
+        found, err = jobs.browser_jobs({"name": "Meta"}, {}, path=path,
+                                       now=datetime(2026, 10, 20, 13, tzinfo=timezone.utc))
+        self.assertIsNone(err)
+
+
+class MetaCardTests(unittest.TestCase):
+    def test_two_vacancies_with_one_title_are_both_kept_when_they_have_links(self):
+        import browser_reader as br
+        cards = [{"text": "Software Engineer, Product\nNew York, NY", "href": "/profile/job_details/111"},
+                 {"text": "Software Engineer, Product\nMenlo Park, CA", "href": "/profile/job_details/222"},
+                 {"text": "Software Engineer, Product\nNew York, NY", "href": "/profile/job_details/111"},
+                 {"text": "Data Engineer\nNew York, NY", "href": ""},
+                 {"text": "Data Engineer\nNew York, NY", "href": ""}]
+        self.assertEqual(len(br.parse_meta_cards(cards)), 3)
+
+
 if __name__ == "__main__":
     unittest.main()

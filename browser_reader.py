@@ -44,14 +44,18 @@ def parse_meta_cards(cards: list) -> list:
             continue
         title = lines[0]
         places = [l for l in lines[1:] if LOCATION_LINE.search(l)][:6]
-        if not places or title in seen:
+        if not places:
             continue
-        seen.add(title)
         href = card.get("href", "") or ""
         if re.search(r"/(profile/job_details|jobs)/\d+", href):
             url = "https://www.metacareers.com" + href.split("?")[0] if href.startswith("/") else href.split("?")[0]
+            identity = url                                               # two vacancies can share a title
         else:
             url = "https://www.metacareers.com/jobs?q=" + quote(title)         # the card has no direct link: search for its exact title
+            identity = title
+        if identity in seen:
+            continue
+        seen.add(identity)
         jobs.append({"title": title, "location": "; ".join(places), "url": url, "posted": ""})
     return jobs
 

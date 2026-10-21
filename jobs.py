@@ -1023,7 +1023,11 @@ def browser_jobs(company: dict, cfg: dict, now=None, path=None):
         data = json.loads(path.read_text())
     except (OSError, ValueError):
         return [], "no browser data yet (run browser_reader.py on the Mac)"
-    source = (data.get("sources") or {}).get(company.get("source", company["name"])) or {}
+    sources = data.get("sources") or {}
+    wanted = company.get("source", company["name"])
+    if wanted not in sources:                                     # not "no jobs": the Mac run did not read it
+        return [], f"no {wanted} section in the browser file (the Mac run skipped or failed it)"
+    source = sources[wanted] or {}
     now = now or datetime.now(timezone.utc)
     try:
         fetched = datetime.fromisoformat(data.get("fetched_at", "").replace("Z", "+00:00"))
@@ -1348,6 +1352,15 @@ def fast_lane_remember(path, keys, now=None):
                     ((now - timedelta(days=120)).isoformat(),))
 
 
+def fast_lane_to_remember(known, met, acknowledged):
+    """First run: remember the whole backlog. Later runs: only roles that were sent or rejected,
+    so anything left over beyond the message cap is still new on the next check."""
+    if known is None:
+        return list(met)
+    handled = set(acknowledged)
+    return [k for k in met if k in handled]
+
+
 def seen_keys(path, keys):
     with closing(_db(path)) as con:
         have = {r[0] for r in con.execute("SELECT job_key FROM jobs_seen")}
@@ -1429,7 +1442,7 @@ def _source_status_summary(results, status_by_key):
 
 
 # ---------- the scan ----------
-async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None, get_html=None, alert_jobs=None, alert_only=False, ack_keys=None, exclude_keys=None, candidate_keys=None):
+async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limit=None, now=None, collect=None, get_html=None, alert_jobs=None, alert_only=False, ack_keys=None, exclude_keys=None, candidate_keys=None, number_from=1):
     """get_json(url) -> (status, JSON); get_html(url) -> (status, text). Returns text, count and errors."""
     candidates, errors, prefiltered_keys = [], [], []
     if ack_keys is not None:
@@ -1609,6 +1622,8 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 continue
             fetched += 1
             status, detail = await get_json(f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs/{job['gh_id']}?pay_transparency=true")
+            if status != 200 or not isinstance(detail, dict):
+                job["details_checked"] = False                   # say so, rather than show it as checked
             if status == 200 and isinstance(detail, dict):
                 job["text"] = re.sub(r"<[^>]+>", " ", detail.get("content", "")).replace("&nbsp;", " ")
                 for r in detail.get("pay_input_ranges") or []:
@@ -1685,7 +1700,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                        "text": j["text"][:5000], "pay": j["pay"], "tier": j.get("tier", 0)} for _, _, j in shown]
     lines = [f"{len(shown)} new role{'s' if len(shown) != 1 else ''} (about {max(remaining, 0)} more waiting):",
              source_summary + hidden_note]
-    for n, (_, _, j) in enumerate(shown, 1):
+    for n, (_, _, j) in enumerate(shown, number_from):
         where = j["location"] if len(j["location"]) <= 60 else j["location"][:57] + "..."
         if j.get("location_verified") is False:
             where += " (search filter; listing location unverified)"

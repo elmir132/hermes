@@ -1603,18 +1603,22 @@ async def run_fast_lane(now=None):
     known = await asyncio.to_thread(jobs.fast_lane_known, DB_PATH)
     async with JOBS_RUN_LOCK:
         acknowledgement, shown, met = [], [], []
+        # Numbers continue after the list already on screen, so "/fit 3" keeps meaning the role it meant.
         text, count, _ = await jobs.scan(lane, _jobs_get, DB_PATH, mark=False, now=now, collect=shown,
                                          get_html=_jobs_get_html, ack_keys=acknowledgement,
-                                         exclude_keys=known, candidate_keys=met)
+                                         exclude_keys=known, candidate_keys=met,
+                                         number_from=len(LAST_JOBS) + 1)
+        remember = jobs.fast_lane_to_remember(known, met, acknowledgement)
         if known is None:                                 # first run: learn today's backlog, send nothing
             count = 0                                     # (the backlog stays in the daily list)
-        elif count:
-            roles = text.split("\n\n• ", 1)[-1].rsplit("\nVisa and experience notes", 1)[0]
-            await bot.send_message(ALLOWED_USER, f"⚡ New at top companies ({count})\n\n• " + roles,
-                                   parse_mode=None, disable_web_page_preview=True)
-            LAST_JOBS[:] = shown
-            jobs.mark_seen(DB_PATH, acknowledgement)
-        await asyncio.to_thread(jobs.fast_lane_remember, DB_PATH, met)
+        else:
+            if count:
+                roles = text.split("\n\n• ", 1)[-1].rsplit("\nVisa and experience notes", 1)[0]
+                await bot.send_message(ALLOWED_USER, f"⚡ New at top companies ({count})\n\n• " + roles,
+                                       parse_mode=None, disable_web_page_preview=True)
+                LAST_JOBS.extend(shown)
+                jobs.mark_seen(DB_PATH, acknowledgement)
+        await asyncio.to_thread(jobs.fast_lane_remember, DB_PATH, remember)
     return count
 
 
