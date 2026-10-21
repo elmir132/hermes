@@ -129,5 +129,32 @@ class ExtraPayTests(unittest.TestCase):
         self.assertEqual(jobs.extra_pay(""), [])
 
 
+class SeniorPayTests(unittest.TestCase):
+    cfg = {"max_start_pay": 300000, "high_pay_new_grad_firms": ["Jane Street"],
+           "junior_words": ["new grad", "early career", "university"]}
+
+    def test_a_very_high_starting_base_is_hidden_unless_new_grad_or_an_exempt_firm(self):
+        job = {"company": "OpenAI", "title": "Software Engineer, Privacy Engineering", "pay": (347000, 385000)}
+        self.assertTrue(jobs.senior_pay(job, self.cfg))
+        self.assertFalse(jobs.senior_pay(dict(job, title="Software Engineer, New Grad"), self.cfg))
+        self.assertFalse(jobs.senior_pay(dict(job, company="Jane Street"), self.cfg))
+        self.assertFalse(jobs.senior_pay(dict(job, pay=(180000, 385000)), self.cfg))      # low end is normal
+        self.assertFalse(jobs.senior_pay(dict(job, pay=None), self.cfg))
+        self.assertFalse(jobs.senior_pay(job, {}))                                        # off when not configured
+
+    def test_the_scan_hides_it_and_says_so(self):
+        from test_jobs import FakeFeeds, gh_job, cfg_with, NOW
+        db = os.path.join(tempfile.mkdtemp(), "h.db")
+        feeds = FakeFeeds({"boards-api": {"jobs": [gh_job(1, "Software Engineer, Privacy"), gh_job(2, "Software Engineer, New Grad")]}},
+                          details={"https://boards-api.greenhouse.io/v1/boards/acme/jobs/1?pay_transparency=true": {"content": "Base pay $347,000 - $385,000."},
+                                   "https://boards-api.greenhouse.io/v1/boards/acme/jobs/2?pay_transparency=true": {"content": "Base pay $347,000 - $385,000."}})
+        cfg = cfg_with([{"name": "Acme", "provider": "greenhouse", "slug": "acme"}], max_start_pay=300000)
+        text, n, _ = asyncio.run(jobs.scan(cfg, feeds, db, now=NOW, mark=False))
+        self.assertEqual(n, 1)
+        self.assertIn("New Grad", text)
+        self.assertNotIn("Privacy", text)
+        self.assertIn("Hidden: 1 posting whose starting base is $300k or more", text)
+
+
 if __name__ == "__main__":
     unittest.main()

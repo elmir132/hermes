@@ -1209,6 +1209,16 @@ def extra_pay(text: str) -> list:
     return [name for name, pattern in EXTRA_PAY if pattern.search(text)]
 
 
+def senior_pay(job: dict, cfg: dict) -> bool:
+    """A starting base this high usually means an experienced hire. Firms that pay new grads that much
+    (config `high_pay_new_grad_firms`) and titles that say new grad/early career are never hidden."""
+    floor, pay = cfg.get("max_start_pay"), job.get("pay")
+    if not floor or not pay or pay[0] < floor or job.get("company") in set(cfg.get("high_pay_new_grad_firms", [])):
+        return False
+    title = re.sub(r"\s+", " ", re.sub(r"[^a-z0-9+ ]", " ", (job.get("title") or "").lower()))
+    return not has(title, cfg.get("junior_words", []))
+
+
 def pay_ok(pay, cfg) -> bool:
     """Unknown pay passes (the bot cannot tell); a known range whose top is below the minimum does not."""
     floor = cfg.get("min_pay")
@@ -1629,6 +1639,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     fresh.sort(key=lambda x: (-x[2]["score"], x[2]["company"], x[2]["title"]))
     shown, skipped_keys, fetched, per_company = [], list(prefiltered_keys), 0, {}
     hidden_ineligible = 0
+    hidden_senior_pay = 0
     cap = cfg.get("max_per_company") or 10**6
     wanted = limit or cfg.get("max_per_message", 12)
     max_years = cfg.get("max_years")
@@ -1684,6 +1695,10 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
         if not pay_ok(job["pay"], cfg):
             skipped_keys.append(job["key"])                      # known pay below your minimum
             continue
+        if senior_pay(job, cfg):
+            skipped_keys.append(job["key"])                      # starting base this high means an experienced hire
+            hidden_senior_pay += 1
+            continue
         years = required_years(job["text"])
         if max_years and years is not None and years >= max_years:
             skipped_keys.append(job["key"])                      # asks for too much experience: never show it again
@@ -1713,6 +1728,9 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
         mark_seen(db_path, skipped_keys)
     hidden_note = (f"\nHidden: {hidden_ineligible} posting{'s' if hidden_ineligible != 1 else ''} that say U.S. citizenship, "
                    f"U.S. person status or a security clearance is required." if hidden_ineligible else "")
+    if hidden_senior_pay:
+        hidden_note += (f"\nHidden: {hidden_senior_pay} posting{'s' if hidden_senior_pay != 1 else ''} whose starting base is "
+                        f"${cfg['max_start_pay'] // 1000}k or more (usually an experienced hire).")
     if not shown:
         return "No new matching roles today.\n\n" + source_summary + hidden_note + _errs(errors), 0, errors
     remaining = len(fresh) - len(shown) - len(skipped_keys) + len(prefiltered_keys)      # roughly; capped companies keep their extras for later
