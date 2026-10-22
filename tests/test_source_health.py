@@ -102,3 +102,94 @@ class SourceCoverageTests(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(len(pages),1)
         self.assertTrue(all(len(p.encode('utf-16-le'))//2<=3400 for p in pages))
         for c in companies:self.assertIn(c['name']+' — failed','\n'.join(pages))
+
+
+class EmptyDetailTests(unittest.IsolatedAsyncioTestCase):
+    async def test_empty_greenhouse_200_is_partial_unchecked_and_retried(self):
+        with tempfile.TemporaryDirectory() as d:
+            db=Path(d)/'jobs.db'
+            cfg=cfg_with([{'name':'Acme','provider':'greenhouse','slug':'acme'}])
+            calls=[]
+            async def feed(url):
+                if '/jobs/' not in url:return 200,{'jobs':[gh_job(1,'Software Engineer')]}
+                calls.append(url)
+                return 200,{'content':None} if len(calls)==1 else {'content':'Build software.'}
+            text,count,errors=await jobs.scan(cfg,feed,db,now=NOW,mark=False,persist=True)
+            self.assertEqual(count,1)
+            self.assertIn('posting details not read',text)
+            self.assertTrue(any('empty or invalid description' in e for e in errors))
+            self.assertEqual(source_health.coverage(cfg,db,NOW)[0]['partial'],1)
+            await jobs.scan(cfg,feed,db,now=NOW,mark=False,persist=True)
+            self.assertEqual(len(calls),2)
+            self.assertEqual(source_health.coverage(cfg,db,NOW)[0]['healthy'],1)
+
+    async def test_workday_200_with_bad_or_empty_detail_is_partial_not_a_scan_crash(self):
+        company={'name':'Acme','provider':'workday','tenant':'acme','site':'Careers','host':'acme.example.org'}
+        cfg=cfg_with([company])
+        for detail in ({'jobPostingInfo':[]},{'jobPostingInfo':{}},{}):
+            async def feed(url,body=None):
+                if body and body['limit']==1:return 200,{'facets':[{'facetParameter':'locations','values':[{'descriptor':'New York','id':'ny'}]}]}
+                if body:return 200,{'total':1,'jobPostings':[{'title':'Software Engineer','externalPath':'/job/1','locationsText':'New York'}]}
+                return 200,detail
+            with tempfile.TemporaryDirectory() as d:
+                text,count,errors=await jobs.scan(cfg,feed,Path(d)/'jobs.db',now=NOW,mark=False,persist=True)
+            self.assertEqual(count,1)
+            self.assertIn('posting details not read',text)
+            self.assertTrue(any('empty or invalid description' in e for e in errors))
+
+    async def test_empty_rippling_detail_stays_unchecked(self):
+        uid='12345678-1234-1234-1234-123456789abc'
+        company={'name':'Acme','provider':'rippling','slug':'acme'}
+        base=jobs.RIPPLING.format(slug='acme')
+        async def feed(url):
+            if url==base:return 200,[{'uuid':uid,'name':'Software Engineer','url':f'https://ats.rippling.com/acme/jobs/{uid}', 'workLocation':{'label':'New York'}}]
+            return 200,{}
+        with tempfile.TemporaryDirectory() as d:
+            text,count,errors=await jobs.scan(cfg_with([company]),feed,Path(d)/'jobs.db',now=NOW,mark=False,persist=True)
+        self.assertEqual(count,1)
+        self.assertIn('posting details not read',text)
+        self.assertTrue(any('empty or invalid description' in e for e in errors))
+
+    async def test_legacy_empty_cached_details_are_not_permanently_trusted(self):
+        company={'name':'Acme','provider':'greenhouse','slug':'acme'}
+        with tempfile.TemporaryDirectory() as d:
+            db=Path(d)/'jobs.db'
+            cached=jobs.normalize('greenhouse',gh_job(1,'Software Engineer'),'Acme')
+            job_store.upsert(db,[(cached,'greenhouse:acme',True,False)],NOW)
+            calls=[]
+            async def feed(url):
+                if '/jobs/' not in url:return 200,{'jobs':[gh_job(1,'Software Engineer')]}
+                calls.append(url)
+                return 200,{'content':'Build software.'}
+            await jobs.scan(cfg_with([company]),feed,db,now=NOW,mark=False,persist=True)
+        self.assertEqual(len(calls),1)
+
+
+class ReaderLimitDocumentationTests(unittest.TestCase):
+    def test_bounds_visible_even_without_pending_roles(self):
+        cfg=cfg_with([{'name':'Google','provider':'google'}, {'name':'Apple','provider':'apple'},
+                      {'name':'Meta','provider':'browser'}, {'name':'Microsoft','provider':'browser'},
+                      {'name':'Netflix','provider':'browser'},
+                      {'name':'Acme','provider':'workday','tenant':'acme','site':'Careers','host':'example.org'}])
+        with tempfile.TemporaryDirectory() as d:
+            text='\n'.join(source_health.pages(cfg,Path(d)/'absent.db',NOW))
+        for term in ('first results page','newest ordering','Apple:','Meta, Microsoft, Netflix','not one universal 100-role','shared scan budget is 50'):
+            self.assertIn(term,text)
+        self.assertIn('Healthy does not mean every vacancy',text)
+
+    def test_no_sources_has_no_reader_bounds(self):
+        self.assertEqual(source_health.limitations({'companies':[]}),[])
+
+
+class FeedDescriptionEvidenceTests(unittest.IsolatedAsyncioTestCase):
+    async def test_rich_feed_without_description_does_not_claim_requirements_checked(self):
+        from test_jobs import ab_job,lv_job,FakeFeeds
+        companies=[{'name':'AshbyCo','provider':'ashby','slug':'ashbyco'}, {'name':'LeverCo','provider':'lever','slug':'leverco'}]
+        feed=FakeFeeds({'job-board/ashbyco':{'jobs':[ab_job(1,'Software Engineer')]}, 'leverco':[lv_job(1,'Software Engineer')]})
+        with tempfile.TemporaryDirectory() as d:
+            text,count,errors=await jobs.scan(cfg_with(companies),feed,Path(d)/'jobs.db',now=NOW,mark=False,persist=True)
+            counts,_=source_health.coverage(cfg_with(companies),Path(d)/'jobs.db',NOW)
+        self.assertEqual(count,2)
+        self.assertEqual(errors,[])
+        self.assertEqual(text.count('posting details not read'),2)
+        self.assertEqual(counts['partial'],2)

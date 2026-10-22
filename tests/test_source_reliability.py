@@ -30,7 +30,8 @@ class WorkdayReliabilityTests(unittest.TestCase):
                 return 200, SAMPLE
             return 200, {'total': 500, 'jobPostings': [dict(POST, externalPath='/job/' + str(body['appliedFacets']) + str(body['offset'] + i)) for i in range(body['limit'])]}
         found, err = asyncio.run(jobs.fetch_workday(SF, net))
-        self.assertIsNone(err)
+        self.assertIsInstance(err, jobs.ListingCap)
+        self.assertIn('read 40 of 500', err)
         self.assertEqual(len(found), 80)  # Bounded to 40 NY + 40 Bay/remote.
         self.assertEqual([(c['limit'], c['offset']) for c in calls], [(1, 0), (20, 0), (20, 20), (20, 0), (20, 20)])
         self.assertEqual(calls[1]['appliedFacets'], {'locations': ['0e0bece1e96e01cc0d5d99c50f0c865d']})

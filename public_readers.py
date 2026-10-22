@@ -552,21 +552,25 @@ async def fetch_guarded_rippling(company, cfg, public):
 
 async def fetch_guarded_workday(company, cfg, public, now=None):
     """At most four listing calls and two details, with a 20s caller deadline."""
-    from jobs import fetch_workday, _html_text, pay_from_text
+    from jobs import fetch_workday, _html_text, pay_from_text, ListingCap
     calls = 0
     failure = None
+    limited = False
     async def bounded_json(url, body=None):
-        nonlocal calls, failure
+        nonlocal calls, failure, limited
         calls += 1
         if calls > 4:
+            limited = True
             return 200, {"jobPostings": [], "total": 0}
         status, data = await public.json(url, body)
         if status != 200:
             failure = f"listing HTTP {status}"
         return status, data
     found, error = await fetch_workday(dict(company, page_cap=1), bounded_json, now)
-    if error or failure:
-        return found, error or failure
+    if failure or (error and not isinstance(error, ListingCap)):
+        return found, failure or error
+    if limited:
+        error = ListingCap('; '.join(filter(None, [error, 'listing request cap reached: 4 calls'])))
     candidates = [j for j in found if score_job(dict(j, tier=company.get("tier", 0)), cfg, now)]
     candidates.sort(key=lambda j: (-bool(re.search(r"junior|early.career|new.grad", j["title"], re.I)), j["key"]))
     base = f"https://{company['host']}/wday/cxs/{company['tenant']}/{company['site']}"
@@ -581,7 +585,7 @@ async def fetch_guarded_workday(company, cfg, public, now=None):
         job["pay"] = pay_from_text(job["text"])
         if any(term in job["employment"].casefold() for term in ("part", "intern", "contract", "temp")):
             job["text"] = ""  # Guarded scan skips this incomplete, non-full-time record.
-    return found, None
+    return found, error
 
 
 def guardant_jobs(payload, company):
@@ -688,14 +692,14 @@ async def fetch_paced_workday(company, cfg, public, now=None, seen_path=None):
     No retry after a 429, including responses carrying Retry-After: stop this
     scan and let the next daily scan try again with the smaller request load.
     """
-    from jobs import fetch_workday, _html_text, pay_from_text
+    from jobs import fetch_workday, _html_text, pay_from_text, ListingCap
     last_url = None
     async def listing(url, body=None):
         nonlocal last_url
         last_url = url
         return await public.json(url, body)
     found, error = await fetch_workday(company, listing, now)
-    if error:
+    if error and not isinstance(error, ListingCap):
         return found, public_error(public, last_url, error)
     candidates = [j for j in found if score_job(dict(j, tier=company.get('tier', 0)), cfg, now)]
     old = seen_keys(seen_path, [j['key'] for j in candidates]) if seen_path is not None else set()
@@ -712,4 +716,4 @@ async def fetch_paced_workday(company, cfg, public, now=None, seen_path=None):
         job['employment'] = info.get('timeType', '')
         job['details_checked'] = True
         job['pay'] = pay_from_text(job['text'])
-    return found, None
+    return found, error

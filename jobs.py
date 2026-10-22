@@ -75,7 +75,7 @@ HN_SEARCH = "https://hn.algolia.com/api/v1/search_by_date?" + urlencode({"query"
 HN_ITEM = "https://hn.algolia.com/api/v1/items/{id}"
 HN_TITLE_WORDS = ("engineer", "developer", "scientist", "researcher", "swe", "sde", "programmer", "architect", "devops", "sre", "mts", "technical staff")
 WORKDAY_PAGE = 20
-WORKDAY_PAGES = 5            # at most 100 roles per company and run
+WORKDAY_PAGES = 5            # at most 100 roles in the New York facet query per run
 WORKDAY_EXTRA_PAGES = 2      # San Francisco Bay Area and remote filters: at most 40 more roles per filter
 BAY_AREA = ("san francisco", "south san francisco", "oakland", "berkeley", "emeryville", "palo alto", "mountain view", "menlo park",
             "sunnyvale", "santa clara", "san jose", "cupertino", "redwood city", "san mateo", "foster city", "burlingame", "san bruno",
@@ -231,8 +231,12 @@ def workday_jobs(company: dict, postings: list, now=None, label: str = "New York
     return out
 
 
+class ListingCap(str):
+    """A successful but bounded listing read; retain details within their budget."""
+
+
 async def fetch_workday(company: dict, get_json, now=None):
-    """Two steps: find the New York filter ids, then page through the New York roles. Returns (jobs, error)."""
+    """Read bounded location-facet queries; surface truncation as partial coverage."""
     base = f"https://{company['host']}/wday/cxs/{company['tenant']}/{company['site']}"
     status, first = await get_json(base + "/jobs", {"appliedFacets": {}, "limit": 1, "offset": 0, "searchText": ""})
     if status != 200 or not isinstance(first, dict):
@@ -244,30 +248,42 @@ async def fetch_workday(company: dict, get_json, now=None):
         return [], "no New York, San Francisco or remote filter found"
 
     async def pages(applied, limit_pages):
-        got = []
-        for page in range(min(limit_pages, company.get("page_cap", limit_pages))):
+        got, total = [], None
+        cap = min(limit_pages, company.get("page_cap", limit_pages))
+        for page in range(cap):
             status, data = await get_json(base + "/jobs", {"appliedFacets": applied, "limit": WORKDAY_PAGE, "offset": page * WORKDAY_PAGE,
                                                            "searchText": company.get("search", "")})
             if status != 200 or not isinstance(data, dict):
                 return got, f"listing HTTP {status}"
             batch = data.get("jobPostings", [])
+            if not isinstance(batch, list):
+                return got, "invalid listing response"
             got += batch
-            if len(batch) < WORKDAY_PAGE or (page + 1) * WORKDAY_PAGE >= data.get("total", 0):
-                break
-        return got, None
+            raw_total = data.get('total')
+            total = raw_total if isinstance(raw_total, int) and raw_total >= 0 else None
+            if total is not None and len(got) >= total:
+                return got, None
+            if len(batch) < WORKDAY_PAGE:
+                if total is not None and len(got) < total:
+                    return got, ListingCap(f"short listing response: read {len(got)} of {total}")
+                return got, None
+        count = str(total) if total is not None else 'unknown total'
+        return got, ListingCap(f"listing cap reached: read {len(got)} of {count}")
 
-    found, seen = [], set()
+    found, seen, limits = [], set(), []
     groups = ([(ids, WORKDAY_PAGES, "New York")] if ids else []) + \
              [({facet: values}, WORKDAY_EXTRA_PAGES, "San Francisco Bay Area or remote") for facet, values in extra.items()]
-    for applied, limit_pages, label in groups:              # one query per filter group: Workday ANDs different groups
+    for applied, limit_pages, label in groups:
         postings, error = await pages(applied, limit_pages)
         for job in workday_jobs(company, postings, now, label):
             if job["key"] not in seen:
                 seen.add(job["key"])
                 found.append(job)
-        if error:
-            return found, error  # A failed later page must not become a successful partial read.
-    return found, None
+        if isinstance(error, ListingCap):
+            limits.append(f'{label} ({",".join(applied)}): {error}')
+        elif error:
+            return found, error  # Stop on real errors, including 403/429.
+    return found, ListingCap('; '.join(limits)) if limits else None
 
 
 async def fetch_amazon(company: dict, get_json):
@@ -1661,13 +1677,18 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     fresh = [(p, s, j) for p, s, j in candidates if j["key"] not in old and url_aliases[j["key"]] not in old_urls]
     if candidate_keys is not None:                               # the fast lane remembers what it has already met
         candidate_keys.extend(j["key"] for _, _, j in fresh)
-    if exclude_keys:
+    if exclude_keys and not persist:
+        # In durable mode this is a delivery exclusion, not a preparation
+        # exclusion. The caller's queue selection suppresses baseline alerts.
         fresh = [(p, s, j) for p, s, j in fresh if j["key"] not in exclude_keys]
     unique = {}
     for p, slug, job in fresh:
         unique.setdefault(url_aliases[job["key"]] or job["key"], (p, slug, job))
     fresh = list(unique.values())
-    fresh.sort(key=lambda x: (-x[2]["score"], x[2]["company"], x[2]["title"]))
+    detail_retries = job_store.detail_retry_keys(db_path) if persist else set()
+    # Failed high-score details must not consume every later scan's budget.
+    # Delivery is still sorted by score independently in job_store.batch().
+    fresh.sort(key=lambda x: (x[2]['key'] in detail_retries, -x[2]["score"], x[2]["company"], x[2]["title"]))
     shown, skipped_keys, fetched, per_company = [], list(prefiltered_keys), 0, {}
     hidden_ineligible = 0
     hidden_senior_pay = 0
@@ -1694,9 +1715,13 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 job["details_checked"] = False                   # say so, rather than show it as checked
                 detail_failures.setdefault(job["company"], set()).add(f"description HTTP {status}")
             if status == 200 and isinstance(detail, dict):
-                job["text"] = re.sub(r"<[^>]+>", " ", detail.get("content", "")).replace("&nbsp;", " ")
+                content = detail.get('content')
+                job["text"] = _html_text(content if isinstance(content, str) else '')
+                job['details_checked'] = bool(job['text'])
+                if not job['details_checked']:
+                    detail_failures.setdefault(job['company'], set()).add('empty or invalid description')
                 for r in detail.get("pay_input_ranges") or []:
-                    if r.get("currency_type") == "USD" and r.get("min_cents") and r.get("max_cents"):
+                    if isinstance(r, dict) and r.get("currency_type") == "USD" and r.get("min_cents") and r.get("max_cents"):
                         job["pay"] = (int(r["min_cents"]) // 100, int(r["max_cents"]) // 100)
                         job["pay_basis"] = "base"
                         break
@@ -1710,9 +1735,13 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             if status != 200:
                 job["details_checked"] = False
                 detail_failures.setdefault(job["company"], set()).add(f"description HTTP {status}")
-            if status == 200 and not rippling_detail(job, detail):
-                skipped_keys.append(job["key"])                  # internship, contract or part-time
-                continue
+            if status == 200:
+                if not rippling_detail(job, detail):
+                    skipped_keys.append(job["key"])              # internship, contract or part-time
+                    continue
+                if not job.get('text', '').strip():
+                    job['details_checked'] = False
+                    detail_failures.setdefault(job['company'], set()).add('empty or invalid description')
         if provider == "workday" and not job["text"]:
             if any((c.get("guarded") or c.get("paced")) and c.get("name") == job["company"] for c in companies):
                 continue  # This source already spent its own detail budget.
@@ -1721,10 +1750,16 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             fetched += 1
             status, detail = await get_json(f"https://{slug_host(cfg, job['company'])}/wday/cxs/{slug_path(cfg, job['company'])}{job['wd_path']}")
             info = (detail or {}).get("jobPostingInfo", {}) if status == 200 and isinstance(detail, dict) else {}
+            if not isinstance(info, dict):
+                info = {}
+            description = info.get('jobDescription')
+            job['text'] = _html_text(description if isinstance(description, str) else '')
+            job['details_checked'] = bool(job['text'])
             if status != 200:
                 job["details_checked"] = False
                 detail_failures.setdefault(job["company"], set()).add(f"description HTTP {status}")
-            job["text"] = _html_text(info.get("jobDescription", ""))
+            elif not job['details_checked']:
+                detail_failures.setdefault(job['company'], set()).add('empty or invalid description')
             if "part" in (info.get("timeType") or "").lower() or "intern" in (info.get("timeType") or "").lower():
                 skipped_keys.append(job["key"])
                 continue
@@ -1738,6 +1773,9 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
                 job["text"], job["details_checked"] = body, True
                 if "new york" in body.lower() or any(city in body.lower() for city in BAY_AREA):
                     job["location_verified"] = True
+        # A valid listing payload is not proof its posting description exists.
+        if not job.get('text', '').strip():
+            job['details_checked'] = False
         # Preserve legacy base-only configs; total-comp configs require actual
         # stated totals or annual component evidence, never guessed stock values.
         compensation = None
@@ -1768,7 +1806,7 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             continue
         job["age"] = age_days(job, now)
         if job.get("details_checked") is False:
-            job["flags"] = ["posting details not read; location, pay, visa, eligibility, experience unchecked"]
+            job["flags"] = ([pay_label(job['pay'])] if job.get('pay') else []) + ["posting details not read; experience, visa and eligibility unverified"]
         else:
             eligibility = eligibility_flags(job["text"])
             if cfg.get("hide_ineligible", True) and any(f in eligibility for f in INELIGIBLE):

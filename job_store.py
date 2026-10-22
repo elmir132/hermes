@@ -167,14 +167,32 @@ def batch(path, cfg, *, include_seen=False, companies=None, exclude_keys=None, l
             if len(selected) >= limit:
                 break
     if not selected:
-        text = 'No pending matching roles. Scans refill the stored list automatically; /jobs refresh checks now.'
+        with closing(connect(path)) as con:
+            unfinished = con.execute("SELECT COUNT(*) FROM jobs_pending WHERE status='new' AND ready=0").fetchone()[0]
+        if unfinished:
+            text = f'{unfinished} discovered roles await eligibility/detail checks. None is ready in this selection yet. /jobs refresh prepares stored discoveries.'
+        else:
+            text = 'No pending matching roles. Scans refill the stored list automatically; /jobs refresh checks now.'
     return text, selected, list(dict.fromkeys(acknowledgements))
 
 
 def states(path):
     with closing(connect(path)) as con:
-        return {r['key']: (r['ready'] and json.loads(r['payload']).get('details_checked') is not False, r['status'])
-                for r in con.execute('SELECT key,ready,status,payload FROM jobs_pending')}
+        states = {}
+        for row in con.execute('SELECT key,ready,status,payload FROM jobs_pending'):
+            payload = json.loads(row['payload'])
+            checked = row['ready'] and bool(payload.get('text', '').strip()) and payload.get('details_checked') is not False
+            states[row['key']] = (checked, row['status'])
+        return states
+
+
+def detail_retry_keys(path):
+    """Previously attempted details yield to discoveries never checked yet."""
+    with closing(connect(path)) as con:
+        return {r[0] for r in con.execute("SELECT key FROM jobs_pending WHERE status='new' AND ready=1 "
+                "AND json_extract(payload,'$.details_checked')=0 "
+                "AND (source_key LIKE 'greenhouse:%' OR source_key LIKE 'workday:%' "
+                "OR source_key LIKE 'rippling:%' OR source_key LIKE 'google:%')")}
 
 
 def identity(path, alias):

@@ -3,7 +3,9 @@
 Scans save title/location matches to SQLite before output caps. Full descriptions
 already returned by a feed are filtered across the entire discovered set. Readers
 which need separate descriptions keep the existing request cap; unfinished jobs
-remain stored and later scans advance through them. Unread details are labelled.
+remain stored and later scans advance through them. Never-attempted details take
+priority over retrying failed details, so failures cannot consume every later
+scan's budget. Delivery order still uses the existing role score. Unread details are labelled.
 Cached descriptions from shallow feeds are reused; they are not a live guarantee
 that requirements or availability remain unchanged.
 
@@ -11,7 +13,7 @@ that requirements or availability remain unchanged.
 fetching career sites. `/jobs all` includes previously sent prepared matches and
 does not acknowledge them again. `/jobs refresh` explicitly fills the queue from
 the sources before browsing it. Daily and hourly loops fill the same store and
-send from it. An empty initial store needs a scheduled or explicit refresh.
+send from it. An empty initial store needs a scheduled or explicit refresh. Hourly notification-baseline exclusions never block preparing discoveries for manual browsing; the baseline still suppresses old hourly notifications. Discovered but unprepared rows are reported as awaiting checks, not as no matching jobs.
 
 Selection is not delivery. Only a successful Telegram send updates the shared
 seen-store and marks queued roles sent, in one SQLite transaction. Failed sends

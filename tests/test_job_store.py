@@ -114,6 +114,25 @@ class QueueTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(self.ready(), 5)
         self.assertEqual(len(detail_calls), 5)
 
+    async def test_failed_high_priority_details_do_not_starve_unchecked_discoveries(self):
+        cfg = cfg_with([{'name':'Acme','provider':'greenhouse','slug':'acme'}])
+        calls = []
+        async def feed(url):
+            if '/jobs/' not in url:
+                return 200, {'jobs':[gh_job(i, f'Software Engineer Team{i}') for i in range(4)]}
+            calls.append(url)
+            return (503,{}) if '/jobs/0?' in url or '/jobs/1?' in url else (200,{'content':'Build software.'})
+        with patch.object(jobs,'DETAIL_LIMIT',1):
+            await jobs.scan(cfg,feed,self.db,now=NOW,mark=False,persist=True)
+            self.assertEqual(len(calls),2)
+            await jobs.scan(cfg,feed,self.db,now=NOW,mark=False,persist=True)
+            self.assertEqual(len(calls),4)
+            self.assertIn('/jobs/2?',calls[2])
+            self.assertIn('/jobs/3?',calls[3])
+            await jobs.scan(cfg,feed,self.db,now=NOW,mark=False,persist=True)
+            self.assertEqual(len(calls),6)  # Retries resume once untouched work is done.
+        self.assertEqual(self.ready(),4)
+
     async def test_discovery_survives_interrupted_detail_request(self):
         cfg = cfg_with([{'name': 'Acme', 'provider': 'greenhouse', 'slug': 'acme'}])
         async def feed(url):
@@ -175,6 +194,24 @@ class QueueTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(await env['run_fast_lane'](NOW), 2)
             self.assertEqual(await env['run_fast_lane'](NOW), 0)
         self.assertEqual(job_store.counts(self.db), {'new': 1, 'sent': 8})
+
+    async def test_preupgrade_fast_baseline_does_not_block_preparation_or_spam_backlog(self):
+        raw = lv_job(1, 'Software Engineer')
+        jobs.fast_lane_remember(self.db, ['lv:Acme:l1'], NOW)
+        job_store.upsert(self.db, [(jobs.normalize('lever', raw, 'Acme'), 'lever:acme', False, False)], NOW)
+        text, rows, _ = job_store.batch(self.db, self.cfg, now=NOW)
+        self.assertFalse(rows)
+        self.assertIn('await eligibility/detail checks', text)
+        send = AsyncMock()
+        env = main_functions({'refresh_jobs', 'run_jobs', 'run_fast_lane'}, dict(
+            jobs=jobs, DB_PATH=self.db, LAST_JOBS=[], JOBS_RUN_LOCK=asyncio.Lock(),
+            JOBS_SCAN_LOCK=asyncio.Lock(), _jobs_get=FakeFeeds({'lever':[raw]}), _jobs_get_html=None,
+            bot=SimpleNamespace(send_message=send), ALLOWED_USER=1))
+        with patch.object(jobs, 'load_config', return_value=self.cfg):
+            self.assertEqual(await env['run_fast_lane'](NOW), 0)
+        send.assert_not_awaited()
+        self.assertEqual(self.ready(), 1)
+        self.assertEqual(len(job_store.batch(self.db, self.cfg, now=NOW)[1]), 1)
 
     async def test_failed_detail_is_labelled_and_can_be_retried_on_a_later_scan(self):
         cfg = cfg_with([{'name': 'Acme', 'provider': 'greenhouse', 'slug': 'acme'}])

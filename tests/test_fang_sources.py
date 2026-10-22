@@ -73,7 +73,7 @@ class SearchPageTests(unittest.TestCase):
             text, count, _ = asyncio.run(jobs.scan(cfg, unused_json, os.path.join(tmp, "jobs.db"),
                                                   mark=False, get_html=get_html))
         self.assertEqual(count, 1)
-        self.assertIn("posting details not read; location, pay, visa, eligibility, experience unchecked", text)
+        self.assertIn("posting details not read; experience, visa and eligibility unverified", text)
         self.assertIn("search filter; listing location unverified", text)
         self.assertNotIn("pay: not stated", text)
         self.assertNotIn("visa: not stated", text)

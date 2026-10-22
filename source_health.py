@@ -63,10 +63,28 @@ def summary(counts):
     return 'Sources: ' + ' · '.join(f'{state} {counts[state]}' for state in STATES) + ' (/sources)'
 
 
+def limitations(cfg):
+    """Known reader bounds, independent of HTTP health and pending-row counts."""
+    providers = {c['provider'] for c in cfg.get('companies', [])}
+    lines = []
+    if 'google' in providers:
+        lines.append('Google: first results page per configured query/location; newest ordering and complete coverage are not verified.')
+    if 'apple' in providers:
+        lines.append('Apple: search listings only; posting pay, visa and experience details are not read.')
+    names = [c['name'] for c in cfg.get('companies', []) if c['provider']=='browser']
+    if names:
+        lines.append('Mac snapshots (' + ', '.join(names)[:250] + '): refreshed by the Mac reader; posting details are not read.')
+    if 'workday' in providers:
+        lines.append('Workday: bounded queries per location/facet group, not one universal 100-role employer limit. Truncated reads are partial.')
+    if providers:
+        lines.append('Detail budgets vary by reader; the shared scan budget is 50, with additional provider-specific budgets. Unread details are not verified eligibility.')
+    return lines
+
+
 def pages(cfg, path, now=None):
     import jobs
     counts, rows = coverage(cfg, path, now)
-    heading = summary(counts) + '\nLatest recorded state; not a live rescan. Stale = no success for 2+ days; Mac snapshots expire after 26h by default.'
+    heading = summary(counts) + '\nLatest recorded state; not a live rescan. Healthy does not mean every vacancy/detail was read. Stale = no success for 2+ days; Mac snapshots expire after 26h by default.'
     lines = []
     for state in ('failed', 'stale', 'partial'):
         for row in sorted((r for r in rows if r['state'] == state), key=lambda r:r['company']):
@@ -75,6 +93,9 @@ def pages(cfg, path, now=None):
     never = [r['company'] for r in rows if r['state']=='never-checked']
     if never:
         lines.append('Never checked: '+', '.join(never[:12]) + (f' (+{len(never)-12} more)' if len(never)>12 else ''))
+    limits = limitations(cfg)
+    if limits:
+        lines.extend(['Known reader limits:', *limits])
     output, text = [], heading
     for line in lines:
         if len((text+'\n'+line).encode('utf-16-le'))//2 > 3400:
