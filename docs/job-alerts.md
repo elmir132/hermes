@@ -29,6 +29,25 @@ HERMES_JOB_ALERT_INTERVAL_SECONDS=300
 
 The account value is the existing local token label. Omitting it uses all working accounts. Missing senders prevents mailbox searches. The five-minute interval is independent of the daily source scan; values are clamped to 60–3600 seconds. Gmail API reads never mark email read, change labels, or send mail.
 
+## Check an actual exported message
+
+In Gmail, open a real job alert, choose **Show original**, verify the sender and
+Gmail authentication results, then **Download original**. Keep the `.eml` private.
+Run:
+
+```sh
+python3 -m job_alert_validation path-to-private-message.eml
+```
+
+The command performs no network requests, email writes, database writes or worker
+activation. It prints the exact sender and separate title, employer, location and
+link for each listing. Exit code 0 means all detected listing links parsed; code 2
+means incomplete/unsupported input. An exported header is not proof of authentic
+mail. Compare every listing against the actual message before configuring the
+existing exact-sender allowlist. Never enable a sender based on a newsletter or
+sign-in notification. Parser success does not guarantee that future templates or
+emails contain every vacancy.
+
 ## Delivery and recovery
 
 - Each poll fetches at most eight emails and four Gmail list pages. Durable fixed windows, page tokens, pending message IDs and account rotation advance through backlogs. Exact From headers are rechecked after fetching messages. The importer does not require job-related subject words; the digest's subject filter remains unchanged.
