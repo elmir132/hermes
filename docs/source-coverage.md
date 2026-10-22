@@ -41,6 +41,14 @@ browsing after preparation. If rows are still unprepared, `/jobs` says they awai
 checks; it does not incorrectly report no jobs. A full refresh is still needed to
 populate sources not included in the hourly lane after an initially empty upgrade.
 
+When daily scans or the fast lane are enabled, a startup pass checks newly added
+or renamed board identities once, after a one-minute delay. It uses the normal
+scan lock, bounded readers and durable queue, without sending notifications or
+reading alert emails. Already attempted sources, including failures, are left to
+their ordinary schedule. The identities are checked again after acquiring the
+lock to avoid duplicating a scan that just finished. Once all identities have an
+attempt, this startup pass makes no employer requests.
+
 Known restrictions remain: email-only employers require actual validated alerts;
 unknown pay and eligibility need review; closed/changed postings are not detected
 by these consistency fixes. No title, salary, visa, location, employer or rating

@@ -2546,7 +2546,9 @@
     "exits": 3,
     "sponsor": true
    },
-   "tier": 3
+   "tier": 3,
+   "public_feed": true,
+   "ratings_note": "Estimates; company ratings are not role-specific pay or sponsorship evidence."
   },
   {
    "name": "WorldQuant",

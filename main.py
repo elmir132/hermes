@@ -1608,10 +1608,16 @@ LAST_FIT: dict = {}           # job url -> resume name suggested by /fit
 JOBS_SCAN_LOCK = asyncio.Lock()  # Network scans never hold the delivery/browsing lock.
 
 
-async def refresh_jobs(cfg=None, now=None, candidate_keys=None, exclude_keys=None, include_alerts=True):
+async def refresh_jobs(cfg=None, now=None, candidate_keys=None, exclude_keys=None, include_alerts=True, only_unchecked=False):
     """Fill durable storage using existing bounded readers. Never marks a delivery."""
     cfg = cfg if cfg is not None else await asyncio.to_thread(jobs.load_config)
     async with JOBS_SCAN_LOCK:
+        if only_unchecked:
+            import source_health
+            missing = await asyncio.to_thread(source_health.unchecked_companies, cfg, DB_PATH)
+            if not missing:
+                return []
+            cfg = dict(cfg, companies=missing)
         alert_jobs, alert_errors = [], []
         if include_alerts and os.environ.get("HERMES_JOB_ALERT_RECORDS") == "1" and digest.parse_job_alert_senders():
             import job_alerts
@@ -1669,6 +1675,21 @@ async def run_fast_lane(now=None):
             await asyncio.to_thread(jobs.fast_lane_remember, DB_PATH,
                 jobs.fast_lane_to_remember(known, met, acknowledgement))
         return len(LAST_JOBS) if acknowledgement else 0
+
+
+async def _jobs_onboarding_refresh():
+    """One bounded startup pass for new board identities, without notifications."""
+    await asyncio.sleep(60)
+    try:
+        import source_health
+        cfg = await asyncio.to_thread(jobs.load_config)
+        missing = await asyncio.to_thread(source_health.unchecked_companies, cfg, DB_PATH)
+        if missing:
+            errors = await refresh_jobs(dict(cfg, companies=missing), include_alerts=False, only_unchecked=True)
+            if errors:
+                print('[jobs onboarding] ' + '; '.join(errors), flush=True)
+    except Exception as exc:
+        print(f'[jobs onboarding] failed: {type(exc).__name__}: {exc}', flush=True)
 
 
 async def _browser_health_loop():
@@ -2157,6 +2178,7 @@ async def main():
         asyncio.create_task(_jobs_fast_loop())
     if JOBS_DAILY or FAST_LANE:
         asyncio.create_task(_browser_health_loop())
+        asyncio.create_task(_jobs_onboarding_refresh())
     if job_alert_worker.enabled():
         asyncio.create_task(_job_alert_loop())
     asyncio.create_task(_followup_loop())

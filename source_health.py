@@ -104,3 +104,16 @@ def pages(cfg, path, now=None):
         text += '\n'+line
     output.append(text)
     return output
+
+
+def unchecked_companies(cfg, path):
+    """Current board identities that have never had an attempt; no file writes."""
+    import jobs
+    attempted = set()
+    path = Path(path)
+    if path.exists():
+        with closing(sqlite3.connect(path.resolve().as_uri()+'?mode=ro', uri=True)) as con:
+            exists = con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='jobs_source_status'").fetchone()
+            if exists:
+                attempted = {row[0] for row in con.execute("SELECT source_key FROM jobs_source_status WHERE last_attempt_at IS NOT NULL AND last_attempt_at<>''")}
+    return [company for company in cfg.get('companies', []) if jobs._source_key(company) not in attempted]
