@@ -2537,8 +2537,8 @@
   },
   {
    "name": "Old Mission Capital",
-   "provider": "greenhouse",
-   "slug": "oldmissioncapital",
+   "provider": "ashby",
+   "slug": "old-mission-capital",
    "ratings": {
     "pay": 4,
     "prestige": 3,
