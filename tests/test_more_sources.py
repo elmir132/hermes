@@ -66,7 +66,7 @@ class BrowserFileTests(unittest.TestCase):
     def test_an_old_file_still_works_but_says_how_old_it_is(self):
         found, err = jobs.browser_jobs(self.company(), CFG, NOW, self.write(self.data(NOW - timedelta(days=5))))
         self.assertEqual(len(found), 1)
-        self.assertIn("5 days old", err)
+        self.assertIn("120 hours old", err)
 
     def test_a_missing_file_or_source_is_reported_not_fatal(self):
         found, err = jobs.browser_jobs(self.company(), CFG, NOW, "/nonexistent/file.json")

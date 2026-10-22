@@ -154,6 +154,26 @@ def read_events(page, name: str):
     return parse_cerebral_cards(page.evaluate(JS_CEREBRAL)), None
 
 
+def write_snapshot(path, data):
+    """Atomically publish a complete cache; readers never see a partial JSON file."""
+    import os
+    import tempfile
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix='.' + path.name, dir=path.parent)
+    try:
+        with os.fdopen(fd, 'w') as stream:
+            json.dump(data, stream, indent=1, ensure_ascii=False)
+            stream.write('\n')
+        os.replace(temporary, path)
+    except BaseException:
+        try:
+            os.unlink(temporary)
+        except OSError:
+            pass
+        raise
+
+
 def run(only=None, out=OUT, queries=QUERIES):
     from playwright.sync_api import sync_playwright
     result = {"fetched_at": datetime.now(timezone.utc).isoformat(), "sources": {}, "events": {}}
@@ -185,7 +205,7 @@ def run(only=None, out=OUT, queries=QUERIES):
                         seen.add(job["url"] + job["title"])
                         jobs.append(job)
                 time.sleep(PAUSE_BETWEEN_PAGES_S)
-            result["sources"][name] = {"jobs": jobs, "error": error}
+            result["sources"][name] = {"jobs": jobs, "error": error, "fetched_at": datetime.now(timezone.utc).isoformat()}
         for name in EVENT_SOURCES:
             if only and name.lower() != only.lower().replace("-", " "):
                 continue
@@ -198,10 +218,7 @@ def run(only=None, out=OUT, queries=QUERIES):
                 page.close()
             result["events"][name] = {"events": found, "error": error}
         browser.close()
-    out = Path(out)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(result, indent=1, ensure_ascii=False))
-    out.chmod(0o600)
+    write_snapshot(out, result)
     return result
 
 

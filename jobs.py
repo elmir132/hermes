@@ -70,7 +70,7 @@ GEM = "https://api.gem.com/job_board/v0/{slug}/job_posts/"     # Gem's documente
 RIPPLING = "https://api.rippling.com/platform/api/ats/v1/board/{slug}/jobs"   # the public board API behind ats.rippling.com
 CONCURRENCY = 4
 BROWSER_FILE = Path(__file__).parent / "browser_jobs.json"      # written daily by browser_reader.py on the Mac
-BROWSER_STALE_DAYS = 3
+BROWSER_STALE_HOURS = 26
 HN_SEARCH = "https://hn.algolia.com/api/v1/search_by_date?" + urlencode({"query": "Ask HN: Who is hiring?", "tags": "story,author_whoishiring", "hitsPerPage": 5})
 HN_ITEM = "https://hn.algolia.com/api/v1/items/{id}"
 HN_TITLE_WORDS = ("engineer", "developer", "scientist", "researcher", "swe", "sde", "programmer", "architect", "devops", "sre", "mts", "technical staff")
@@ -1023,16 +1023,22 @@ def browser_jobs(company: dict, cfg: dict, now=None, path=None):
         data = json.loads(path.read_text())
     except (OSError, ValueError):
         return [], "no browser data yet (run browser_reader.py on the Mac)"
-    sources = data.get("sources") or {}
+    if not isinstance(data, dict) or not isinstance(data.get("sources"), dict):
+        return [], "invalid browser snapshot structure"
+    sources = data["sources"]
     wanted = company.get("source", company["name"])
     if wanted not in sources:                                     # not "no jobs": the Mac run did not read it
         return [], f"no {wanted} section in the browser file (the Mac run skipped or failed it)"
     source = sources[wanted] or {}
+    if not isinstance(source, dict) or not isinstance(source.get('jobs', []), list):
+        return [], "invalid browser source structure"
     now = now or datetime.now(timezone.utc)
     try:
-        fetched = datetime.fromisoformat(data.get("fetched_at", "").replace("Z", "+00:00"))
-        age = (now - fetched).days
-    except ValueError:
+        fetched = datetime.fromisoformat(source.get("fetched_at", data.get("fetched_at", "")).replace("Z", "+00:00"))
+        age = (now - fetched).total_seconds() / 3600
+        if age < -5 / 60:
+            age = None
+    except (ValueError, TypeError, AttributeError):
         fetched, age = None, None
     out = []
     for raw in source.get("jobs", []):
@@ -1045,8 +1051,10 @@ def browser_jobs(company: dict, cfg: dict, now=None, path=None):
     errors = []
     if source.get("error"):
         errors.append(f"browser reader: {source['error']}")
-    if age is not None and age >= BROWSER_STALE_DAYS:
-        errors.append(f"browser data is {age} days old")
+    if age is None:
+        errors.append("browser snapshot timestamp missing, invalid or in the future")
+    elif age >= cfg.get('browser_max_age_hours', BROWSER_STALE_HOURS):
+        errors.append(f"browser data is {int(age)} hours old")
     return out, ("; ".join(errors) or None)
 
 

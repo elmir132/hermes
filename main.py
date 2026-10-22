@@ -1638,6 +1638,21 @@ async def run_fast_lane(now=None):
         return len(LAST_JOBS) if acknowledgement else 0
 
 
+async def _browser_health_loop():
+    """Hourly, local-cache-only warnings, independent of daily feed scans."""
+    import browser_health
+    await asyncio.sleep(90)
+    async def send(text):
+        await bot.send_message(ALLOWED_USER, text, parse_mode=None, disable_web_page_preview=True)
+    while True:
+        try:
+            cfg = await asyncio.to_thread(jobs.load_config)
+            await browser_health.run_once(cfg, DB_PATH, send)
+        except Exception as exc:
+            print(f"[browser health] failed: {type(exc).__name__}: {exc}")
+        await asyncio.sleep(3600)
+
+
 async def _jobs_fast_loop():
     await asyncio.sleep(300)                              # let the bot settle after a restart
     while True:
@@ -2095,6 +2110,8 @@ async def main():
         asyncio.create_task(_jobs_loop())
     if FAST_LANE:
         asyncio.create_task(_jobs_fast_loop())
+    if JOBS_DAILY or FAST_LANE:
+        asyncio.create_task(_browser_health_loop())
     if job_alert_worker.enabled():
         asyncio.create_task(_job_alert_loop())
     asyncio.create_task(_followup_loop())

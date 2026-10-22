@@ -48,6 +48,11 @@ def coverage(cfg, path, now=None):
             error = f'{pending[key]} stored match(es) with unread or unfinished details'
         else:
             state = 'healthy'
+        if company.get('provider') == 'browser':
+            found, cache_error = jobs.browser_jobs(company, cfg, now)
+            if cache_error:
+                state = 'stale' if 'browser data is ' in cache_error else ('partial' if found else 'failed')
+                error = cache_error
         result.append(dict(key=key, company=company['name'], state=state,
                            last_success_at=row.get('last_success_at'), last_error=error))
     counts = Counter(r['state'] for r in result)
@@ -61,7 +66,7 @@ def summary(counts):
 def pages(cfg, path, now=None):
     import jobs
     counts, rows = coverage(cfg, path, now)
-    heading = summary(counts) + '\nLatest recorded state; not a live rescan. Stale = no success for 2+ days.'
+    heading = summary(counts) + '\nLatest recorded state; not a live rescan. Stale = no success for 2+ days; Mac snapshots expire after 26h by default.'
     lines = []
     for state in ('failed', 'stale', 'partial'):
         for row in sorted((r for r in rows if r['state'] == state), key=lambda r:r['company']):
