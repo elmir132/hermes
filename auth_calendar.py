@@ -12,6 +12,11 @@ if not account:
     print("Aborted.")
     sys.exit(1)
 
+if account.endswith("-read"):     # e.g. "bl13-read": read-only Gmail + Calendar, used for reading only
+    SCOPES = ["https://www.googleapis.com/auth/calendar.readonly",
+              "https://www.googleapis.com/auth/gmail.readonly"]
+    print("Read-only sign-in: Hermes can read this mailbox and calendar, never change them.")
+
 token_path = Path(f"token_{account}.json")
 print(f"Saving to {token_path}...")
 

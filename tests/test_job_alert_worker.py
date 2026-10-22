@@ -271,7 +271,7 @@ class AdditionalPolicyTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_account_selection_does_not_open_other_tokens(self):
         selected = []
-        env = main_functions({'_job_alert_accounts'}, dict(
+        env = main_functions({'_job_alert_accounts', '_token_files_for', '_is_read_only', '_account_of'}, dict(Path=Path,
             job_alert_worker=SimpleNamespace(account_names=lambda:{'personal'}),
             _all_token_files=lambda:[Path('token_personal.json'),Path('token_other.json')],
             _load_creds=lambda p:(selected.append(p.name) or SimpleNamespace(token='test-token'))))

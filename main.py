@@ -416,18 +416,49 @@ _GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/gmail.readonly",
 ]
+# A sign-in saved as token_<account>-read.json holds only these read permissions. Everything that
+# only reads (mail digest, job-alert emails, calendar lists) prefers it; nothing that writes uses it.
+_GOOGLE_READ_SCOPES = [
+    "https://www.googleapis.com/auth/calendar.readonly",
+    "https://www.googleapis.com/auth/gmail.readonly",
+]
 _HERE      = Path(__file__).parent
 _GCAL_API  = "https://www.googleapis.com/calendar/v3"
 _GMAIL_API = "https://gmail.googleapis.com/gmail/v1"
 
+def _is_read_only(token_path: Path) -> bool:
+    return Path(token_path).stem.endswith("-read")
+
+
+def _scopes_for(token_path: Path) -> list:
+    return _GOOGLE_READ_SCOPES if _is_read_only(token_path) else _GOOGLE_SCOPES
+
+
+def _account_of(token_path: Path) -> str:
+    """'token_bl13-read.json' and 'token_bl13.json' both belong to account 'bl13'."""
+    return Path(token_path).stem.removeprefix("token_").removesuffix("-read") or Path(token_path).stem
+
+
+def _token_files_for(purpose: str) -> list[Path]:
+    """'write': full sign-ins only. 'read': one file per account, the read-only one when it exists."""
+    files = _all_token_files()
+    if purpose == "write":
+        return [p for p in files if not _is_read_only(p)]
+    chosen = {}
+    for p in files:
+        if _account_of(p) not in chosen or _is_read_only(p):
+            chosen[_account_of(p)] = p
+    return [chosen[a] for a in sorted(chosen)]
+
+
 def _load_creds(token_path: Path):
     """Valid credentials or None. A refreshed token is saved atomically (signin.save_atomic)."""
-    return signin.load(token_path, _GOOGLE_SCOPES)[0]
+    return signin.load(token_path, _scopes_for(token_path))[0]
 
 
 def _creds_health() -> dict:
     """{account: None if it works, else 'expired' / 'transient' / 'broken'}."""
-    return {(p.stem.replace("token_", "") or p.stem): signin.load(p, _GOOGLE_SCOPES)[1] for p in _all_token_files()}
+    return {(p.stem.replace("token_", "") or p.stem): signin.load(p, _scopes_for(p))[1] for p in _all_token_files()}
 
 
 SIGNIN_STATE = _HERE / "signin_state.json"      # which accounts were already reported broken (kept out of git)
@@ -451,11 +482,11 @@ def _all_token_files() -> list[Path]:
             tokens = [legacy]
     return tokens
 
-def _all_creds() -> list[tuple[str, object]]:
-    """Return list of (account_name, creds) for all token files."""
+def _all_creds(purpose: str = "read") -> list[tuple[str, object]]:
+    """(account_name, creds) per account: read-only sign-ins for reading, full ones for writing."""
     result = []
-    for p in _all_token_files():
-        name = p.stem.replace("token_", "") or p.stem
+    for p in _token_files_for(purpose):
+        name = _account_of(p)
         c = _load_creds(p)
         if c:
             result.append((name, c))
@@ -471,7 +502,7 @@ def _creds_diag() -> list[str]:
         try:
             from google.oauth2.credentials import Credentials
             from google.auth.transport.requests import Request
-            creds = Credentials.from_authorized_user_file(str(p), _GOOGLE_SCOPES)
+            creds = Credentials.from_authorized_user_file(str(p), _scopes_for(p))
             if creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             scopes = creds.scopes or []
@@ -529,14 +560,15 @@ async def calendar_get_events(days: int = 7) -> str:
     return f"Upcoming {days}d ({len(all_lines)} events):\n" + "\n".join(all_lines)
 
 async def calendar_add_event(title: str, start_iso: str, duration_minutes: int = 60, description: str = "") -> str:
-    accounts = await asyncio.to_thread(_all_creds)
+    accounts = await asyncio.to_thread(_all_creds, "write")
     if not accounts:
         return "Google Calendar not set up."
     _, creds = accounts[0]  # create in primary account
     try:
         start_dt = datetime.fromisoformat(start_iso)
         if start_dt.tzinfo is None:
-            start_dt = start_dt.replace(tzinfo=timezone(timedelta(hours=4)))
+            from zoneinfo import ZoneInfo                  # a time without a zone means New York time
+            start_dt = start_dt.replace(tzinfo=ZoneInfo("America/New_York"))
         end_dt = start_dt + timedelta(minutes=duration_minutes)
         body = {
             "summary": title,
@@ -1709,9 +1741,9 @@ async def cmd_sources(msg: Message):
 def _job_alert_accounts():
     wanted = job_alert_worker.account_names()
     accounts = []
-    for path in _all_token_files():
+    for path in _token_files_for("read"):
         name = path.stem.removeprefix('token_')
-        if wanted and name not in wanted:
+        if wanted and name not in wanted and _account_of(path) not in wanted:
             continue
         creds = _load_creds(path)
         if creds:
