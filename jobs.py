@@ -1770,10 +1770,11 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
             visa_notes = [f for f in visa_flags(job["text"], job.get("ratings"))
                           if f != "⚠️ citizenship or clearance required"]
             extras = extra_pay(job["text"])
-            job["flags"] = ([pay_label(job["pay"]) + (" + " + ", ".join(extras) + " mentioned" if extras else "")] + visa_notes + eligibility
-                             + ([f"asks for {years}+ years"] if years and years >= 3 else []))
+            job["flags"] = ([pay_label(job["pay"]) + (" + " + ", ".join(extras) + " mentioned" if extras else "")] + visa_notes + eligibility)
         if compensation:
             job['flags'].extend(job_compensation.notes(compensation))
+        import job_requirements
+        job['flags'] = job_requirements.flags(job)
         if persist:
             finalized.append((job, f"{provider}:{slug}", True, False))
         shown.append((provider, slug, job))

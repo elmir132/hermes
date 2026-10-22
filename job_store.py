@@ -148,6 +148,8 @@ def batch(path, cfg, *, include_seen=False, companies=None, exclude_keys=None, l
             name = job['company']
             if per_company.get(name, 0) >= (cfg.get('max_per_company') or 10**6):
                 continue
+            import job_requirements
+            job['flags'] = job_requirements.flags(job)
             where = job['location'] if len(job['location']) <= 60 else job['location'][:57] + '...'
             if job.get('location_verified') is False:
                 where += ' (search filter; listing location unverified)'
