@@ -1633,7 +1633,8 @@ async def run_jobs(mark=False, include_seen=False, ack_keys=None, companies=None
     LAST_JOBS[:] = shown
     import source_health
     health, _ = await asyncio.to_thread(source_health.coverage, cfg, DB_PATH, now)
-    text = source_health.summary(health) + "\n\n" + text
+    import job_report
+    text = job_report.coverage(health) + "\n\n" + text
     if ack_keys is not None:
         ack_keys[:] = acknowledgement
     if mark and not include_seen:
@@ -1827,6 +1828,18 @@ def _pick_job(arg: str, msg=None):
     return job_store.resolve(DB_PATH, first,
         chat_id=chat.id if chat else None,
         message_id=reply.message_id if reply else None)
+
+@dp.message(Command("jobscore"))
+async def cmd_jobscore(msg: Message):
+    if not allowed(msg): return
+    job = _pick_job(_args(msg, "jobscore"), msg)
+    if not job:
+        await msg.answer("Usage: /jobscore <job ID>, or reply to its jobs message with /jobscore <number>.")
+        return
+    import job_report
+    cfg = await asyncio.to_thread(jobs.load_config)
+    await msg.answer(job_report.explain(job, cfg), parse_mode=None, disable_web_page_preview=True)
+
 
 @dp.message(Command("fit"))
 async def cmd_fit(msg: Message):

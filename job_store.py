@@ -126,7 +126,8 @@ def batch(path, cfg, *, include_seen=False, companies=None, exclude_keys=None, l
     limit = limit or cfg.get('max_per_message', 12)
     excluded = set(exclude_keys or ())
     selected, acknowledgements, per_company = [], [], {}
-    header = 'Stored matches: /fit <ID>, /save <ID>, /applied <ID>. For a list number, reply to this message.'
+    import job_report
+    header = job_report.HEADER
     text = header
     with closing(connect(path)) as con:
         query = "SELECT p.key,p.payload,i.public_id FROM jobs_pending p JOIN jobs_public_ids i ON i.key=p.key WHERE ready=1 AND status IN " + ("('new','sent')" if include_seen else "('new')")
@@ -150,14 +151,7 @@ def batch(path, cfg, *, include_seen=False, companies=None, exclude_keys=None, l
                 continue
             import job_requirements
             job['flags'] = job_requirements.flags(job)
-            where = job['location'] if len(job['location']) <= 60 else job['location'][:57] + '...'
-            if job.get('location_verified') is False:
-                where += ' (search filter; listing location unverified)'
-            tier = f" [tier {job['tier']}{jobs.rating_label(job.get('ratings'))}]" if job.get('tier') else ''
-            age = jobs.age_days(job, now)
-            posted = f' · posted {age}d ago' if age is not None else ''
-            block = (f"\n\n• {name}{tier}: {job['title']}  #{len(selected)+number_from} [{row['public_id']}]\n  {where}{posted}"
-                     f"\n  {'; '.join(job.get('flags', []))}\n  {job['url']}")
+            block = '\n\n' + job_report.card(job, cfg, len(selected)+number_from, row['public_id'], now)
             if len((text + block).encode('utf-16-le')) // 2 > 3400:
                 continue
             text += block

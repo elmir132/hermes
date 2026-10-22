@@ -1873,6 +1873,10 @@ async def scan(cfg: dict, get_json, db_path, mark=True, include_seen=False, limi
     lines = [f"{len(shown)} new role{'s' if len(shown) != 1 else ''} (about {max(remaining, 0)} more waiting):",
              source_summary + hidden_note]
     for n, (_, _, j) in enumerate(shown, number_from):
+        if persist:
+            import job_report
+            lines.append('\n' + job_report.card(j, cfg, n, j.get('job_id'), now))
+            continue
         where = j["location"] if len(j["location"]) <= 60 else j["location"][:57] + "..."
         if j.get("location_verified") is False:
             where += " (search filter; listing location unverified)"

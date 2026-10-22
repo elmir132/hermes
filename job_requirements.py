@@ -1,9 +1,15 @@
 """Bounded, literal requirement hints. Posting text is data, never instructions."""
+import html
 import re
 
 
 def notes(title, text, years=None):
-    text = re.sub(r'[\x00-\x1f\x7f]+', ' ', (title or '') + '. ' + (text or ''))
+    # Feeds often keep HTML codes such as &#39; and &lt; in the text; decode them (twice, for
+    # double-escaped feeds) and drop tags, so a snippet doesn't stop at the code's ';'.
+    text = html.unescape(html.unescape((title or '') + '. ' + (text or '')))
+    text = re.sub(r'</?(?:p|br|li|div|ul|ol|tr|h[1-6])\b[^>]*>', '. ', text, flags=re.I)   # a block ends a sentence
+    text = re.sub(r'<[^>]+>', ' ', text)
+    text = re.sub(r'[\x00-\x1f\x7f]+', ' ', text)
     out = []
     if years:
         out.append(f'Experience: asks for {years}+ years; check first-job eligibility')
@@ -14,9 +20,11 @@ def notes(title, text, years=None):
         ('Start date', r'\b(?:start(?:ing)?(?: date)?|immediate start)\b[^.!?;]{0,85}'),
     ):
         for match in re.finditer(pattern, text, re.I):
-            snippet = match[0].strip()
+            snippet = re.sub(rf'^{label}\s*:\s*', '', match[0].strip(), flags=re.I)   # 'Start date: Start date: ...'
             if re.search(r'\b20\d{2}\b|\bimmediate\b', snippet, re.I):
-                out.append(f'{label}: {snippet[:100]}; verify your availability')
+                if len(snippet) > 100:                               # end at a whole word
+                    snippet = snippet[:100].rsplit(' ', 1)[0].rstrip(',;:') + '…'
+                out.append(f'{label}: {snippet}; verify your availability')
                 break
     if re.search(r'\b(?:Ph\.?D\.?|doctorate)\s+(?:is\s+)?required\b|\bmust (?:have|hold|possess)\s+(?:a\s+)?(?:Ph\.?D\.?|doctorate)\b', text, re.I):
         out.append('Degree: PhD explicitly required; check eligibility')
